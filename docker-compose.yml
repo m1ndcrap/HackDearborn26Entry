@@ -1,0 +1,15 @@
+services:
+  api:
+    build: ./api
+    env_file:
+      - path: ./api/.env
+        required: false # without it the API runs in MOCK mode
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
