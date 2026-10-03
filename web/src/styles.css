@@ -109,3 +109,6 @@ button:disabled, .busy { opacity: 0.6; cursor: progress; }
 .filebtn.off input { cursor: not-allowed; }
 .install { padding-bottom: 14px; }
 .install .hint { margin: 0; }
+.choices { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
+.camera { background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+.camera video { display: block; width: 100%; max-height: 60dvh; object-fit: cover; }
