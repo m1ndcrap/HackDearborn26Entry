@@ -61,6 +61,7 @@ Icons live in `web/public/` (`pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.pn
 
     api/app/models.py   data contract (Pydantic). Mirror changes in web/src/types.ts
     api/app/gemini.py   vision extraction + explanations (Gemini, structured JSON output)
+    api/app/drugs.py    verifies each scan: RxNorm (name -> ingredient, real strengths) + FDA NDC Directory (exact product)
     api/app/safety.py   deterministic checks (demo rules) + openFDA label fetch starter
     api/app/main.py     endpoints: /api/scan, /api/report, /api/explain, /api/label/{ingredient}
     web/src/screens/    Cabinet, Scan (+confirm), Report (flags + explain + read aloud), Profile
@@ -72,7 +73,7 @@ Rules and FDA label data decide what gets flagged. Gemini only extracts text fro
 ## Next up (in order)
 
 1. Real Gemini key, then test scan with a printed fake label (check extraction quality first).
-2. Replace DEMO_RULES in safety.py with openFDA label text (fetch_label_section is an untested starter) plus RxNorm name normalization.
+2. Replace DEMO_RULES in safety.py with openFDA label text (fetch_label_section is an untested starter). Scans already carry RxNorm ingredients (drugs.py).
 3. Discharge-sheet reconciliation, pre-purchase OTC check.
 4. Smart schedule, Medication Passport (PDF/QR), offline polish.
 5. Vultr deploy with HTTPS.

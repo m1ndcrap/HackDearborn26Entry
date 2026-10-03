@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
-from . import gemini, openfda, rxnorm, safety, tts
+from . import gemini, openfda, rxnorm, safety, tts, drugs
 from .models import ExplainRequest, ExplainResponse, Medication, ReportRequest, SafetyReport, ScanResult
 
 app = FastAPI(title="Pocket Apothecary API")
@@ -44,6 +44,7 @@ async def scan(file: UploadFile = File(...)):
         raise HTTPException(502, f"Couldn't read that image: {e}")
     for m in result.medications:
         m.id = uuid.uuid4().hex[:8]
+        drugs.verify(m)  # Gemini read it; RxNorm / FDA NDC decide what it is
         await run_in_threadpool(_apply_normalization, m)
     return result
 
