@@ -102,7 +102,11 @@ export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void })
     }
   }
 
-  const useCamera = () => (canUseLiveCamera() ? setLive(true) : nativeCameraRef.current?.click());
+  const useCamera = () => {
+    if (canUseLiveCamera()) return setLive(true);
+    if (window.matchMedia("(pointer: coarse)").matches) return nativeCameraRef.current?.click();
+    setError("The in-app camera needs https or localhost. Open http://localhost:5173 on this computer, or use your phone.");
+  };
 
   const edit = (id: string, patch: Partial<Medication>) => setFound((f) => f && f.map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
@@ -152,18 +156,15 @@ export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void })
     <section className="empty">
       <h2>Scan a label</h2>
       <p>Take a clear photo of a pill bottle, an over-the-counter box, or a discharge sheet.</p>
-      <label className={"primary filebtn" + (busy ? " busy" : "") + (online ? "" : " off")}>
-        {busy ? "Reading label…" : online ? "Take a photo" : "Scanning needs a connection"}
-        <input type="file" accept="image/*" capture="environment" disabled={busy || !online} onChange={(e) => pick(e.target.files?.[0])} />
-      </label>
       <div className="choices">
-        <button className="primary" onClick={useCamera} disabled={busy}>
+        <button className="primary" onClick={useCamera} disabled={busy || !online}>
           {busy ? "Reading label…" : "Use camera"}
         </button>
-        <button className="secondary" onClick={() => libraryRef.current?.click()} disabled={busy}>
+        <button className="secondary" onClick={() => libraryRef.current?.click()} disabled={busy || !online}>
           Choose from photo library
         </button>
       </div>
+      {!online && <p className="hint">Scanning needs a connection. Your cabinet still works offline.</p>}
       {/* Hidden inputs: the library picker has no capture attribute; the native-camera one is the fallback when live camera isn't available (e.g. http on a phone). */}
       <input ref={libraryRef} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
       <input ref={nativeCameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => pick(e.target.files?.[0])} />

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { explainFlag, getReport } from "../api";
+import { loadReport, saveReport } from "../reportCache";
+import { speak } from "../speech";
 import type { Medication, Profile, SafetyFlag, SafetyReport } from "../types";
 import { useOnline } from "../useOnline";
 
-const VOICE: Record<string, string> = { English: "en-US", Español: "es-ES", العربية: "ar-SA" };
 const LABEL = { high: "Talk to a pharmacist", caution: "Use caution", info: "Good to know" } as const;
 
 function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [speaking, setSpeaking] = useState(false);
   const online = useOnline();
 
   async function explain() {
@@ -24,11 +26,13 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
     }
   }
 
-  function speak() {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = VOICE[profile.language] ?? "en-US";
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+  async function readAloud() {
+    setSpeaking(true);
+    try {
+      await speak(text, profile.language); // ElevenLabs when configured, browser voice otherwise
+    } finally {
+      setSpeaking(false);
+    }
   }
 
   return (
@@ -52,8 +56,8 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
           {busy ? "Explaining…" : text ? "Explain again" : `Explain in ${profile.language}`}
         </button>
         {text && (
-          <button className="ghost" onClick={speak}>
-            Read aloud
+          <button className="ghost" onClick={readAloud} disabled={speaking}>
+            {speaking ? "Loading voice…" : "Read aloud"}
           </button>
         )}
       </div>
@@ -65,6 +69,7 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
 export default function Report({ profile, meds, onScan }: { profile: Profile; meds: Medication[]; onScan: () => void }) {
   const [report, setReport] = useState<SafetyReport | null>(null);
   const [error, setError] = useState("");
+  const [savedAt, setSavedAt] = useState("");
   const online = useOnline();
 
   useEffect(() => {
@@ -72,12 +77,26 @@ export default function Report({ profile, meds, onScan }: { profile: Profile; me
       setReport(null);
       return;
     }
-    if (!online) return; // keep whatever report we already have; rerun when back online
+    const showSaved = (fallbackError?: string) => {
+      const cached = loadReport(profile.id);
+      if (cached) {
+        setReport(cached.report);
+        setSavedAt(cached.at);
+      } else if (fallbackError) setError(fallbackError);
+    };
+    if (!online) {
+      showSaved(); // offline: show the last saved check; rerun when back online
+      return;
+    }
     let live = true;
     setError("");
+    setSavedAt("");
     getReport(profile, meds)
-      .then((r) => live && setReport(r))
-      .catch((e) => live && setError(e instanceof Error ? e.message : "Couldn't run the check."));
+      .then((r) => {
+        saveReport(profile.id, r);
+        if (live) setReport(r);
+      })
+      .catch((e) => live && showSaved(e instanceof Error ? e.message : "Couldn't run the check."));
     return () => {
       live = false;
     };
@@ -106,6 +125,7 @@ export default function Report({ profile, meds, onScan }: { profile: Profile; me
       {!report && !error && (
         <p className="hint">{online ? `Checking ${meds.length} medicines…` : "The safety check needs a connection. It will run when you're back online."}</p>
       )}
+      {savedAt && <p className="hint">This is the last saved check from {new Date(savedAt).toLocaleString()}. It will refresh when you're back online.</p>}
       {report && report.flags.length === 0 && (
         <p className="ok">No conflicts found among {report.checked} medicines. This check doesn't cover everything, so ask your pharmacist if you're unsure.</p>
       )}

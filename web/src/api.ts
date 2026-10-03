@@ -39,3 +39,30 @@ export async function explainFlag(profile: Profile, flag: SafetyFlag): Promise<s
   );
   return r.text;
 }
+
+export interface Normalized {
+  input: string;
+  cleaned: string;
+  ingredients: string[];
+  rxcui: string | null;
+  source: "local" | "rxnorm" | "fallback" | "none";
+}
+
+/** Brand or misspelled name -> generic ingredients. Use for manually added medicines. */
+export async function normalizeName(name: string): Promise<Normalized> {
+  return json(await fetch(`/api/normalize?name=${encodeURIComponent(name)}`));
+}
+
+export class TtsUnavailable extends Error {}
+
+/** ElevenLabs audio from the backend. Throws TtsUnavailable when the server has no ElevenLabs key. */
+export async function ttsAudio(text: string): Promise<Blob> {
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (res.status === 503) throw new TtsUnavailable("ElevenLabs isn't configured");
+  if (!res.ok) throw new Error(`Voice request failed (${res.status})`);
+  return res.blob();
+}
