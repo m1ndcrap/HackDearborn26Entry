@@ -1,12 +1,14 @@
 import { useState } from "react";
 import type { useAppState } from "../store";
 import type { ReadingLevel } from "../types";
+import { useInstall } from "../useInstall";
 
 const split = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
 export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppState> }) {
   const p = app.profile;
   const [newName, setNewName] = useState("");
+  const pwa = useInstall();
 
   return (
     <section>
@@ -63,6 +65,24 @@ export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppSt
           Add person
         </button>
       </div>
+
+      {(pwa.canInstall || pwa.showIOSHint) && (
+        <>
+          <h2>Get the app</h2>
+          <div className="card install">
+            <p>Add Pocket Apothecary to your home screen. It opens like an app and your cabinet works without a connection.</p>
+            {pwa.canInstall ? (
+              <button className="primary" onClick={pwa.install}>
+                Install app
+              </button>
+            ) : (
+              <p className="hint">
+                In Safari, tap the Share button, then <strong>Add to Home Screen</strong>.
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 }

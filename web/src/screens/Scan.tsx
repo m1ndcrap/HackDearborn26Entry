@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { scanImage } from "../api";
 import type { Medication } from "../types";
+import { useOnline } from "../useOnline";
 
 const LOW = 0.7;
 
@@ -8,6 +9,7 @@ export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
+  const online = useOnline();
 
   async function pick(file?: File) {
     if (!file) return;
@@ -70,9 +72,9 @@ export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void })
     <section className="empty">
       <h2>Scan a label</h2>
       <p>Take a clear photo of a pill bottle, an over-the-counter box, or a discharge sheet.</p>
-      <label className={"primary filebtn" + (busy ? " busy" : "")}>
-        {busy ? "Reading label…" : "Take a photo"}
-        <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={(e) => pick(e.target.files?.[0])} />
+      <label className={"primary filebtn" + (busy ? " busy" : "") + (online ? "" : " off")}>
+        {busy ? "Reading label…" : online ? "Take a photo" : "Scanning needs a connection"}
+        <input type="file" accept="image/*" capture="environment" disabled={busy || !online} onChange={(e) => pick(e.target.files?.[0])} />
       </label>
       {error && (
         <p role="alert" className="err">

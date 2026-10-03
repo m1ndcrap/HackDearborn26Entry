@@ -22,6 +22,32 @@ Open the URL Vite prints. To test on a phone, use the "Network" URL (same Wi-Fi)
 
 Without a Gemini key the API runs in MOCK mode (fake scan results, templated explanations), so the whole UI can be built first. `GET /health` shows which mode you're in.
 
+## Testing the PWA (install + offline)
+
+The service worker only runs in a production build, and only on `localhost` or HTTPS. So `npm run dev` and the phone "Network" URL above won't show install or offline behavior.
+
+    cd web
+    npm run build && npm run preview     # serves dist/ on :4173, still proxies /api to the backend
+
+On a laptop, open http://localhost:4173 in Chrome, then go to DevTools > Application:
+- Manifest: should say installable, with no errors.
+- Service workers: should be activated.
+- Network > Offline, then reload: the cabinet still opens and the offline banner shows.
+
+On a phone, you need HTTPS. With the backend and preview running:
+
+    npx cloudflared tunnel --url http://localhost:4173
+
+Open the https://...trycloudflare.com URL it prints.
+- Android Chrome: Profile > Install app.
+- iPhone Safari: Share > Add to Home Screen.
+
+Then turn on airplane mode and launch it from the home screen.
+
+Icons live in `web/public/` (`pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png`). Overwrite them with the real artwork using the same names. To regenerate them all from one SVG:
+
+    npx @vite-pwa/assets-generator --preset minimal-2023 public/icon.svg
+
 ## Layout
 
     api/app/models.py   data contract (Pydantic). Mirror changes in web/src/types.ts

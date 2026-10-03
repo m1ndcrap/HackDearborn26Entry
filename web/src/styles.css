@@ -103,3 +103,9 @@ button:disabled, .busy { opacity: 0.6; cursor: progress; }
 .tabs button.on { color: var(--cobalt); box-shadow: inset 0 3px 0 var(--cobalt); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.offline { margin: 0; padding: 8px 18px; background: var(--amber-bg); color: var(--amber-ink); font-size: 0.85rem; font-weight: 600; border-bottom: 1.5px solid var(--amber); }
+.filebtn.off { opacity: 0.6; cursor: not-allowed; }
+.filebtn.off input { cursor: not-allowed; }
+.install { padding-bottom: 14px; }
+.install .hint { margin: 0; }

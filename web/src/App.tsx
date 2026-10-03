@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppState } from "./store";
+import { useOnline } from "./useOnline";
 import Cabinet from "./screens/Cabinet";
 import Scan from "./screens/Scan";
 import Report from "./screens/Report";
@@ -17,6 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
 export default function App() {
   const app = useAppState();
   const [tab, setTab] = useState<Tab>("cabinet");
+  const online = useOnline();
 
   return (
     <div className="shell">
@@ -33,6 +35,12 @@ export default function App() {
           </select>
         </label>
       </header>
+
+      {!online && (
+        <p className="offline" role="status">
+          You're offline. Your cabinet still works; scanning and safety checks need a connection.
+        </p>
+      )}
 
       <main>
         {tab === "cabinet" && <Cabinet meds={app.meds} profile={app.profile} onScan={() => setTab("scan")} onRemove={app.removeMed} />}

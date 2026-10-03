@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { explainFlag, getReport } from "../api";
 import type { Medication, Profile, SafetyFlag, SafetyReport } from "../types";
+import { useOnline } from "../useOnline";
 
 const VOICE: Record<string, string> = { English: "en-US", Español: "es-ES", العربية: "ar-SA" };
 const LABEL = { high: "Talk to a pharmacist", caution: "Use caution", info: "Good to know" } as const;
@@ -9,6 +10,7 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const online = useOnline();
 
   async function explain() {
     setBusy(true);
@@ -46,7 +48,7 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
         </p>
       )}
       <div className="actions">
-        <button className="secondary" onClick={explain} disabled={busy}>
+        <button className="secondary" onClick={explain} disabled={busy || !online}>
           {busy ? "Explaining…" : text ? "Explain again" : `Explain in ${profile.language}`}
         </button>
         {text && (
@@ -63,12 +65,14 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
 export default function Report({ profile, meds, onScan }: { profile: Profile; meds: Medication[]; onScan: () => void }) {
   const [report, setReport] = useState<SafetyReport | null>(null);
   const [error, setError] = useState("");
+  const online = useOnline();
 
   useEffect(() => {
     if (meds.length === 0) {
       setReport(null);
       return;
     }
+    if (!online) return; // keep whatever report we already have; rerun when back online
     let live = true;
     setError("");
     getReport(profile, meds)
@@ -77,7 +81,7 @@ export default function Report({ profile, meds, onScan }: { profile: Profile; me
     return () => {
       live = false;
     };
-  }, [profile, meds]);
+  }, [profile, meds, online]);
 
   if (meds.length === 0) {
     return (
@@ -99,7 +103,9 @@ export default function Report({ profile, meds, onScan }: { profile: Profile; me
           {error}
         </p>
       )}
-      {!report && !error && <p className="hint">Checking {meds.length} medicines…</p>}
+      {!report && !error && (
+        <p className="hint">{online ? `Checking ${meds.length} medicines…` : "The safety check needs a connection. It will run when you're back online."}</p>
+      )}
       {report && report.flags.length === 0 && (
         <p className="ok">No conflicts found among {report.checked} medicines. This check doesn't cover everything, so ask your pharmacist if you're unsure.</p>
       )}
