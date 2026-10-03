@@ -93,13 +93,14 @@ def explain_flag(req: ExplainRequest) -> str:
 
     prompt = f"""Explain this medication safety flag to the patient.
 Write in {req.profile.language}, at {LEVELS[req.profile.reading_level]}.
-Use ONLY the facts below. Do not add new medical claims, doses, or diagnoses.
+Use ONLY the facts and label text below. Do not add new medical claims, doses, or diagnoses.
 End with one sentence telling them to check with their pharmacist or doctor.
 Keep it under 90 words.
 
 Flag: {f.title}
 Drugs: {", ".join(f.drugs)}
 Facts: {f.detail}
+Label text: {f.excerpt or "(none)"}
 Source: {f.source}"""
     resp = _get_client().models.generate_content(model=MODEL, contents=prompt)
     return (resp.text or "").strip()

@@ -42,7 +42,9 @@ class SafetyFlag(BaseModel):
     title: str
     drugs: list[str]
     detail: str
-    source: str
+    source: str  # human-readable citation, e.g. "FDA label for Coumadin (warfarin), Drug Interactions section"
+    excerpt: Optional[str] = None  # the label sentence this flag came from
+    source_url: Optional[str] = None  # DailyMed page for that label
 
 
 class ReportRequest(BaseModel):
@@ -53,6 +55,7 @@ class ReportRequest(BaseModel):
 class SafetyReport(BaseModel):
     flags: list[SafetyFlag]
     checked: int
+    unchecked: list[str] = Field(default_factory=list)  # medicine names whose FDA label couldn't be found or fetched
 
 
 class ExplainRequest(BaseModel):

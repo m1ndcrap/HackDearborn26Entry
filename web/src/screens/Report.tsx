@@ -41,6 +41,7 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
       <h3>{flag.title}</h3>
       <p className="drugs">{flag.drugs.join(" + ")}</p>
       <p>{flag.detail}</p>
+      {flag.excerpt && <blockquote className="excerpt">“{flag.excerpt}”</blockquote>}
       {text && (
         <p className="explain" dir="auto">
           {text}
@@ -61,7 +62,16 @@ function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
           </button>
         )}
       </div>
-      <p className="src">Source: {flag.source}</p>
+      <p className="src">
+        Source:{" "}
+        {flag.source_url ? (
+          <a href={flag.source_url} target="_blank" rel="noopener noreferrer">
+            {flag.source}
+          </a>
+        ) : (
+          flag.source
+        )}
+      </p>
     </article>
   );
 }
@@ -128,6 +138,12 @@ export default function Report({ profile, meds, onScan }: { profile: Profile; me
       {savedAt && <p className="hint">This is the last saved check from {new Date(savedAt).toLocaleString()}. It will refresh when you're back online.</p>}
       {report && report.flags.length === 0 && (
         <p className="ok">No conflicts found among {report.checked} medicines. This check doesn't cover everything, so ask your pharmacist if you're unsure.</p>
+      )}
+      {report?.unchecked && report.unchecked.length > 0 && (
+        <p className="hint">
+          Couldn't check the FDA label for {report.unchecked.join(", ")}, so only built-in rules were used for{" "}
+          {report.unchecked.length === 1 ? "it" : "them"}. Ask your pharmacist about {report.unchecked.length === 1 ? "this one" : "these"}.
+        </p>
       )}
       {report?.flags.map((f) => <Flag key={f.id} flag={f} profile={profile} />)}
       <p className="disclaimer">Pocket Apothecary doesn't give medical advice. Confirm anything important with your pharmacist or doctor.</p>

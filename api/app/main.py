@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
-from . import gemini, rxnorm, safety, tts
+from . import gemini, openfda, rxnorm, safety, tts
 from .models import ExplainRequest, ExplainResponse, Medication, ReportRequest, SafetyReport, ScanResult
 
 app = FastAPI(title="Pocket Apothecary API")
@@ -19,7 +19,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "gemini_mock_mode": gemini.mock_mode(), "model": gemini.MODEL, "elevenlabs": tts.configured()}
+    return {"ok": True, "gemini_mock_mode": gemini.mock_mode(), "model": gemini.MODEL, "elevenlabs": tts.configured(), "openfda_key": bool(openfda.API_KEY)}
 
 
 def _apply_normalization(m: Medication) -> None:

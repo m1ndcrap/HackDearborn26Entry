@@ -37,10 +37,13 @@ export interface SafetyFlag {
   title: string;
   drugs: string[];
   detail: string;
-  source: string;
+  source: string; // e.g. "FDA label for COUMADIN (warfarin), Drug Interactions section"
+  excerpt?: string | null; // the label sentence this flag came from
+  source_url?: string | null; // DailyMed page for that label
 }
 
 export interface SafetyReport {
   flags: SafetyFlag[];
   checked: number;
+  unchecked?: string[]; // medicine names whose FDA label couldn't be found or fetched
 }
