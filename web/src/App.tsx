@@ -85,8 +85,9 @@ function MainApp() {
         {tab === "cabinet" && <Cabinet meds={app.meds} profile={app.profile} onScan={() => setTab("scan")} onRemove={app.removeMed} />}
         {tab === "scan" && (
           <Scan
-            onAdd={(meds) => {
-              app.addMeds(meds);
+            cabinet={app.meds}
+            onAdd={(meds, replaceIds) => {
+              app.addMeds(meds, replaceIds);
               setTab("report");
             }}
           />

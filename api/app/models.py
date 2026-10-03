@@ -18,6 +18,12 @@ class Medication(BaseModel):
     instructions: Optional[str] = None
     warnings: list[str] = Field(default_factory=list, description="Warnings printed on the label")
     confidence: float = Field(default=0.5, description="0-1 confidence that the fields above were read correctly")
+    ndc: Optional[str] = Field(default=None, description="NDC number exactly as printed, e.g. 0573-0134-20")
+    # Filled by drugs.verify, not by Gemini
+    rxcui: Optional[str] = None
+    verified_by: Optional[str] = None  # "FDA NDC Directory" | "RxNorm" | None (no database match)
+    strength_verified: bool = False
+    strength_options: list[str] = Field(default_factory=list)
 
 
 class ScanResult(BaseModel):

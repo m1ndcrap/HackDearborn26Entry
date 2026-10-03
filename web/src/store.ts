@@ -61,8 +61,12 @@ export function useAppState() {
         return { ...s, profiles: [...s.profiles, p], activeId: p.id, cabinet: { ...s.cabinet, [p.id]: [] } };
       }),
     updateProfile: (p: Profile) => setState((s) => ({ ...s, profiles: s.profiles.map((x) => (x.id === p.id ? p : x)) })),
-    addMeds: (added: Medication[]) =>
-      setState((s) => ({ ...s, cabinet: { ...s.cabinet, [profile.id]: [...(s.cabinet[profile.id] ?? []), ...added] } })),
+    // replaceIds: cabinet entries the new scan supersedes (a refill, or an old strength after a dose change)
+    addMeds: (added: Medication[], replaceIds: string[] = []) =>
+      setState((s) => ({
+        ...s,
+        cabinet: { ...s.cabinet, [profile.id]: [...(s.cabinet[profile.id] ?? []).filter((m) => !replaceIds.includes(m.id)), ...added] },
+      })),
     removeMed: (id: string) =>
       setState((s) => ({ ...s, cabinet: { ...s.cabinet, [profile.id]: (s.cabinet[profile.id] ?? []).filter((m) => m.id !== id) } })),
     setRoutine: (r: Routine) => setState((s) => ({ ...s, routine: { ...s.routine, [profile.id]: r } })),

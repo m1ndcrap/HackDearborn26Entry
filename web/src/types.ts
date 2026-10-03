@@ -13,6 +13,11 @@ export interface Medication {
   instructions?: string | null;
   warnings: string[];
   confidence: number;
+  ndc?: string | null;
+  rxcui?: string | null;
+  verified_by?: string | null;
+  strength_verified?: boolean;
+  strength_options?: string[];
 }
 
 export interface ScanResult {

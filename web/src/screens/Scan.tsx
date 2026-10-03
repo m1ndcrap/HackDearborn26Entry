@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { scanImage } from "../api";
+import { DEFAULT_ACTION, describeMatch, findCabinetMatch, type DupAction } from "../duplicates";
 import type { Medication } from "../types";
 import { useOnline } from "../useOnline";
 
@@ -77,10 +78,16 @@ function CameraView({ onShot, onCancel }: { onShot: (f: File) => void; onCancel:
   );
 }
 
-export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void }) {
+interface ScanProps {
+  cabinet: Medication[];
+  onAdd: (meds: Medication[], replaceIds: string[]) => void;
+}
+
+export default function Scan({ cabinet, onAdd }: ScanProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
+  const [choices, setChoices] = useState<Record<string, DupAction>>({}); // scanned med id -> what to do with its cabinet match
   const online = useOnline();
   const [live, setLive] = useState(false);
   const libraryRef = useRef<HTMLInputElement>(null);
@@ -94,6 +101,7 @@ export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void })
     try {
       const res = await scanImage(file);
       setFound(res.medications);
+      setChoices({});
       if (res.medications.length === 0) setError("We couldn't find a medicine in that photo. Try again in better light, closer to the label.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
@@ -113,35 +121,83 @@ export default function Scan({ onAdd }: { onAdd: (meds: Medication[]) => void })
   if (live) return <CameraView onShot={pick} onCancel={() => setLive(false)} />;
 
   if (found && found.length > 0) {
+    // Recomputed every render so it follows edits to the name or strength
+    const matches = Object.fromEntries(found.map((m) => [m.id, findCabinetMatch(m, cabinet)]));
+    const actionFor = (id: string): DupAction => {
+      const match = matches[id];
+      return match ? (choices[id] ?? DEFAULT_ACTION[match.kind]) : "add";
+    };
+
+    function confirm() {
+      const keep = found!.filter((m) => m.name.trim() && actionFor(m.id) !== "skip");
+      const replaceIds = keep.filter((m) => actionFor(m.id) === "replace").map((m) => matches[m.id]!.existing.id);
+      onAdd(keep, replaceIds);
+    }
+
     return (
       <section>
         <h2>Check what we read</h2>
         <p className="hint">Fix anything that looks wrong before adding. Highlighted rows were harder to read.</p>
-        {found.map((m) => (
-          <div key={m.id} className={"card" + (m.confidence < LOW ? " shaky" : "")}>
-            {m.confidence < LOW && <div className="badge">Double-check this one</div>}
-            <label>
-              Name
-              <input value={m.name} onChange={(e) => edit(m.id, { name: e.target.value, ingredient: null })} />
-            </label>
-            <div className="row">
+        {found.map((m) => {
+          const match = matches[m.id];
+          const dup = match && describeMatch(match);
+          return (
+            <div key={m.id} className={"card" + (m.confidence < LOW ? " shaky" : "")}>
+              {m.confidence < LOW && <div className="badge">Double-check this one</div>}
+              {m.verified_by && (
+                <p className="hint">
+                  ✓ {m.ingredient} · matched in {m.verified_by}
+                  {m.strength_verified ? "" : " (check the strength)"}
+                </p>
+              )}
+              {match && dup && (
+                <fieldset className={"dup " + match.kind}>
+                  <legend>{dup.message}</legend>
+                  {dup.options.map((o) => (
+                    <label key={o.value} className="opt">
+                      <input
+                        type="radio"
+                        name={`dup-${m.id}`}
+                        checked={actionFor(m.id) === o.value}
+                        onChange={() => setChoices((c) => ({ ...c, [m.id]: o.value }))}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
               <label>
-                Strength
-                <input value={m.strength ?? ""} onChange={(e) => edit(m.id, { strength: e.target.value })} />
+                Name
+                <input value={m.name} onChange={(e) => edit(m.id, { name: e.target.value, ingredient: null, rxcui: null, verified_by: null })} />
               </label>
+              <div className="row">
+                <label>
+                  Strength
+                  <input
+                    value={m.strength ?? ""}
+                    list={`strengths-${m.id}`}
+                    placeholder={m.strength_options?.length ? "Pick or type" : ""}
+                    onChange={(e) => edit(m.id, { strength: e.target.value })}
+                  />
+                  {/* Real strengths from RxNorm, so a missing or misread strength can be picked instead of typed */}
+                  <datalist id={`strengths-${m.id}`}>
+                    {m.strength_options?.map((s) => <option key={s} value={s} />)}
+                  </datalist>
+                </label>
+                <label>
+                  Dose
+                  <input value={m.dose ?? ""} onChange={(e) => edit(m.id, { dose: e.target.value })} />
+                </label>
+              </div>
               <label>
-                Dose
-                <input value={m.dose ?? ""} onChange={(e) => edit(m.id, { dose: e.target.value })} />
+                How often
+                <input value={m.frequency ?? ""} onChange={(e) => edit(m.id, { frequency: e.target.value })} />
               </label>
             </div>
-            <label>
-              How often
-              <input value={m.frequency ?? ""} onChange={(e) => edit(m.id, { frequency: e.target.value })} />
-            </label>
-          </div>
-        ))}
+          );
+        })}
         <div className="actions">
-          <button className="primary" onClick={() => onAdd(found.filter((m) => m.name.trim()))}>
+          <button className="primary" onClick={confirm}>
             Add to cabinet
           </button>
           <button className="ghost" onClick={() => setFound(null)}>
