@@ -2,7 +2,14 @@
 
 Scan medications, catch conflicts, understand them in your language. PWA (Vite + React + TypeScript) with a FastAPI backend and Gemini.
 
-## Run it (no Docker yet)
+## Run it with Docker
+
+    cp .env.example api/.env       # optional: add GEMINI_API_KEY (MOCK mode without it)
+    docker compose up --build
+
+Open http://localhost:8080. The `web` container (nginx) serves the built PWA and proxies `/api` and `/health` to the `api` container.
+
+## Run it for development (hot reload)
 
 Terminal 1, backend:
 
@@ -40,6 +47,6 @@ Rules and FDA label data decide what gets flagged. Gemini only extracts text fro
 2. Replace DEMO_RULES in safety.py with openFDA label text (fetch_label_section is an untested starter) plus RxNorm name normalization.
 3. Discharge-sheet reconciliation, pre-purchase OTC check.
 4. Smart schedule, Medication Passport (PDF/QR), offline polish.
-5. Docker compose and a Vultr deploy with HTTPS.
+5. Vultr deploy with HTTPS.
 
 Synthetic data only in demos. Not medical advice.
