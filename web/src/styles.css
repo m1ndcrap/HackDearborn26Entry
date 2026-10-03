@@ -112,3 +112,58 @@ button:disabled, .busy { opacity: 0.6; cursor: progress; }
 .choices { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
 .camera { background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
 .camera video { display: block; width: 100%; max-height: 60dvh; object-fit: cover; }
+
+/* Header profile button */
+.who-group { display: flex; gap: 8px; align-items: center; }
+.profile-btn { min-height: 40px; padding: 6px 12px; background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.6); font-weight: 600; }
+.profile-btn[aria-current="page"] { background: #fff; color: var(--cobalt); }
+.tabs button { font-size: 0.78rem; padding: 0 4px; }
+
+/* Schedule */
+.timeline { list-style: none; margin: 0 0 18px; padding: 0; border-left: 3px solid var(--cobalt); }
+.timeline > li { display: grid; grid-template-columns: 5.4rem 1fr; gap: 10px; padding: 10px 0 10px 12px; position: relative; }
+.timeline > li::before { content: ""; position: absolute; left: -8.5px; top: 16px; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 3px solid var(--cobalt); }
+.timeline time { font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.dose + .dose { margin-top: 8px; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.tag { font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 4px; background: var(--chalk); border: 1px solid var(--line); color: var(--muted); }
+.tag.with-food { background: var(--green-bg); border-color: transparent; color: #1d4f39; }
+.tag.empty-stomach { background: var(--amber-bg); border-color: transparent; color: var(--amber-ink); }
+.tag.moved { background: #e8edf8; border-color: transparent; color: var(--cobalt); }
+.tag.overnight { background: var(--ink); border-color: transparent; color: #fff; }
+.note { background: #e8edf8; border-left: 10px solid var(--cobalt); border-radius: 10px; padding: 10px 14px 2px; margin-bottom: 12px; }
+.plain { list-style: none; padding: 0; margin: 0 0 14px; }
+.plain li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.routine { margin-top: 20px; background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.routine summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.routine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0 12px; margin-top: 10px; }
+
+/* Passport */
+.passport { background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+.passport header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 3px solid var(--cobalt); padding-bottom: 12px; margin-bottom: 12px; }
+.passport header h2 { margin: 0; }
+.passport .who { font-size: 1.2rem; font-weight: 700; margin: 4px 0 0; }
+.passport header img { flex: none; image-rendering: pixelated; }
+.passport h3 { font-size: 1rem; margin: 14px 0 4px; }
+.passport .allergies { background: var(--red-bg); border-left: 10px solid var(--red); border-radius: 8px; padding: 8px 12px; }
+.passport .allergies h3 { margin-top: 0; color: var(--red); }
+.passport .allergies p { font-weight: 700; margin: 0; }
+.passport table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.passport th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1.5px solid var(--line); padding: 4px 6px 4px 0; }
+.passport td { border-bottom: 1px solid var(--line); padding: 6px 6px 6px 0; vertical-align: top; }
+.pill { font-size: 0.75rem; font-weight: 800; padding: 1px 8px; border-radius: 3px; }
+.pill.high { background: var(--red); color: #fff; }
+.pill.caution { background: var(--amber); color: var(--amber-ink); }
+.pill.info { background: var(--cobalt); color: #fff; }
+.shared { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+.banner { background: var(--amber-bg); color: var(--amber-ink); border-radius: 8px; padding: 10px 12px; font-weight: 600; }
+
+@media print {
+  .no-print, .tabs, .top { display: none !important; }
+  html { font-size: 12pt; }
+  body { background: #fff; }
+  main, .shared { padding: 0 !important; }
+  .passport { border: none; padding: 0; }
+  .passport, .passport * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+button.off, .choices button:disabled { cursor: not-allowed; }

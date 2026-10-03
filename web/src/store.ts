@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import { DEFAULT_ROUTINE, type Routine } from "./schedule";
 import type { Medication, Profile } from "./types";
 
 export interface AppState {
   profiles: Profile[];
   activeId: string;
   cabinet: Record<string, Medication[]>; // profile id -> meds
+  routine: Record<string, Routine>; // profile id -> daily routine (local only, not sent to the API)
+  remindersOn: boolean;
 }
 
 const KEY = "apothecary:v1";
@@ -20,14 +23,15 @@ export const newProfile = (name = "Me"): Profile => ({
 });
 
 function initial(): AppState {
+  const base = { routine: {}, remindersOn: false };
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...base, ...JSON.parse(raw) }; // older saves lack routine/remindersOn
   } catch {
     /* ignore corrupt storage */
   }
   const p = newProfile();
-  return { profiles: [p], activeId: p.id, cabinet: { [p.id]: [] } };
+  return { ...base, profiles: [p], activeId: p.id, cabinet: { [p.id]: [] } };
 }
 
 export function useAppState() {
@@ -42,11 +46,14 @@ export function useAppState() {
 
   const profile = state.profiles.find((p) => p.id === state.activeId) ?? state.profiles[0];
   const meds = state.cabinet[profile.id] ?? [];
+  const routineFor = (id: string) => state.routine[id] ?? DEFAULT_ROUTINE;
 
   return {
     state,
     profile,
     meds,
+    routine: routineFor(profile.id),
+    routineFor,
     setActive: (id: string) => setState((s) => ({ ...s, activeId: id })),
     addProfile: (name: string) =>
       setState((s) => {
@@ -58,5 +65,9 @@ export function useAppState() {
       setState((s) => ({ ...s, cabinet: { ...s.cabinet, [profile.id]: [...(s.cabinet[profile.id] ?? []), ...added] } })),
     removeMed: (id: string) =>
       setState((s) => ({ ...s, cabinet: { ...s.cabinet, [profile.id]: (s.cabinet[profile.id] ?? []).filter((m) => m.id !== id) } })),
+    setRoutine: (r: Routine) => setState((s) => ({ ...s, routine: { ...s.routine, [profile.id]: r } })),
+    setRemindersOn: (on: boolean) => setState((s) => ({ ...s, remindersOn: on })),
   };
 }
+
+export type App = ReturnType<typeof useAppState>;

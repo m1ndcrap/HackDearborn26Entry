@@ -37,6 +37,7 @@ The service worker only runs in a production build, and only on `localhost` or H
     npm run build && npm run preview     # serves dist/ on :4173, still proxies /api to the backend
 
 On a laptop, open http://localhost:4173 in Chrome, then go to DevTools > Application:
+
 - Manifest: should say installable, with no errors.
 - Service workers: should be activated.
 - Network > Offline, then reload: the cabinet still opens and the offline banner shows.
@@ -46,6 +47,7 @@ On a phone, you need HTTPS. With the backend and preview running:
     npx cloudflared tunnel --url http://localhost:4173
 
 Open the https://...trycloudflare.com URL it prints.
+
 - Android Chrome: Profile > Install app.
 - iPhone Safari: Share > Add to Home Screen.
 
@@ -76,3 +78,11 @@ Rules and FDA label data decide what gets flagged. Gemini only extracts text fro
 5. Vultr deploy with HTTPS.
 
 Synthetic data only in demos. Not medical advice.
+
+## New in this update
+
+- **RxNorm name matching** (`api/app/rxnorm.py`): brand, misspelled, or strength-laden names become generic ingredients. Runs automatically on every scan; `GET /api/normalize?name=` for manual entries. Medicines now carry an `ingredients` list (multi-ingredient products like NyQuil get all of them).
+- **Schedule tab**: label directions become clock times based on each person's routine, separated drugs are spaced out, and "Add to calendar" exports an .ics file.
+- **Reminders**: browser notifications while the app is open, plus a test button. Use the calendar export for reminders when the app is closed.
+- **Passport tab**: printable one-page summary with a QR code. The QR holds the data itself (nothing stored on a server). Set `VITE_PUBLIC_URL` to the deployed https URL at build time so QR codes open on other phones.
+- **ElevenLabs voice** (`api/app/tts.py`, `POST /api/tts`): set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in `api/.env`. Without them, Read aloud uses the browser voice.

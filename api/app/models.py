@@ -11,6 +11,7 @@ class Medication(BaseModel):
     id: str = ""
     name: str = Field(description="Drug name exactly as printed (brand or generic)")
     ingredient: Optional[str] = Field(default=None, description="Generic active ingredient if known")
+    ingredients: list[str] = Field(default_factory=list, description="All generic active ingredients (filled by RxNorm on the server)")
     strength: Optional[str] = Field(default=None, description="e.g. 500 mg")
     dose: Optional[str] = Field(default=None, description="e.g. 1 tablet")
     frequency: Optional[str] = Field(default=None, description="e.g. twice daily with food")

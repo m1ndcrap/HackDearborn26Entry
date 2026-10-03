@@ -6,6 +6,7 @@ export interface Medication {
   id: string;
   name: string;
   ingredient?: string | null;
+  ingredients?: string[]; // all generic ingredients, filled by RxNorm on the server
   strength?: string | null;
   dose?: string | null;
   frequency?: string | null;
