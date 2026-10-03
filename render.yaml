@@ -1,0 +1,54 @@
+# Render Blueprint: deploys the API (Docker web service) and the PWA (static site).
+# In Render: New > Blueprint > pick this repo. You'll be asked for the secret values marked sync: false.
+#
+# After the first deploy, check the two .onrender.com URLs Render actually assigned.
+# If they differ from the names below, update the three URLs in this file and push.
+
+services:
+  # FastAPI backend
+  - type: web
+    name: pocket-apothecary-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    plan: free # free instances sleep after ~15 idle minutes; switch to starter for demo day
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: ELEVENLABS_MODEL
+        value: eleven_multilingual_v2
+      - key: OPENFDA_API_KEY
+        sync: false
+
+  # PWA frontend on Render's CDN. /api calls are proxied to the backend, so no CORS setup is needed.
+  - type: web
+    name: pocket-apothecary
+    runtime: static
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: web/dist
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_PUBLIC_URL # baked in at build time; used by Passport QR codes
+        value: https://pocket-apothecary.onrender.com
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://pocket-apothecary-api.onrender.com/api/*
+      - type: rewrite
+        source: /health
+        destination: https://pocket-apothecary-api.onrender.com/health
+      - type: rewrite
+        source: /*
+        destination: /index.html
