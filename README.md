@@ -86,3 +86,15 @@ Synthetic data only in demos. Not medical advice.
 - **Reminders**: browser notifications while the app is open, plus a test button. Use the calendar export for reminders when the app is closed.
 - **Passport tab**: printable one-page summary with a QR code. The QR holds the data itself (nothing stored on a server). Set `VITE_PUBLIC_URL` to the deployed https URL at build time so QR codes open on other phones.
 - **ElevenLabs voice** (`api/app/tts.py`, `POST /api/tts`): set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in `api/.env`. Without them, Read aloud uses the browser voice.
+
+## FDA label safety checks
+
+`api/app/openfda.py` fetches FDA drug labels; `api/app/safety.py` turns them into flags.
+
+- **Interactions:** for each pair of medicines, each label's interaction sections are searched for the other drug's ingredients or class (NSAIDs, SSRIs, MAOIs, blood thinners, antacids, and more).
+- **Severity** comes from the label's wording ("contraindicated", "avoid", "serious bleeding" = high; "monitor", "may increase" = caution).
+- **Citations:** each flag has `excerpt` (the label sentence) and `source_url` (the DailyMed page), shown on the Check screen.
+- **Also checked:** profile conditions against label warnings, and alcohol, grapefruit, "with food", and "empty stomach" wording.
+- **Fallbacks:** if openFDA is unreachable or rate limited, built-in rules still run, and the Check screen lists medicines that couldn't be checked.
+- **Rate limits:** add a free `OPENFDA_API_KEY` to `api/.env`. Labels are cached in `api/.label_cache` for a week.
+- **Before the demo:** run `python check_openfda.py` from `api` to test live lookups and warm the cache.
