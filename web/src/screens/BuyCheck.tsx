@@ -117,7 +117,7 @@ export default function BuyCheck({ profile, cabinet, onAdd }: Props) {
                 <>
                   <h3 className="notes-head">Good to know</h3>
                   {notes.map((f) => (
-                    <Flag key={f.id} flag={f} profile={profile} />
+                    <Flag key={f.id} flag={f} profile={profile} note />
                   ))}
                 </>
               )}

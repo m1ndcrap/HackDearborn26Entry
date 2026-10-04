@@ -7,7 +7,8 @@ import { useOnline } from "../useOnline";
 
 const LABEL = { high: "Talk to a pharmacist", caution: "Use caution", info: "Good to know" } as const;
 
-export function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
+/** note: render as a calm "label note" (used under "Good to know"), whatever the label's wording severity. */
+export function Flag({ flag, profile, note = false }: { flag: SafetyFlag; profile: Profile; note?: boolean }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -36,8 +37,8 @@ export function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) 
   }
 
   return (
-    <article className={`flag ${flag.severity}`}>
-      <div className="stripe">{LABEL[flag.severity]}</div>
+    <article className={note ? "flag label-note" : `flag ${flag.severity}`}>
+      <div className="stripe">{note ? "Label note" : LABEL[flag.severity]}</div>
       <h3>{flag.title}</h3>
       <p className="drugs">{flag.drugs.join(" + ")}</p>
       <p>{flag.detail}</p>

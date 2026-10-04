@@ -285,12 +285,13 @@ button.off, .choices button:disabled { cursor: not-allowed; }
 @media (min-width: 900px) {
   .shell {
     max-width: none; height: 100dvh; min-height: 0;
-    display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr);
-    grid-template-areas: "top top" "offline offline" "nav main";
+    display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "top top" "install install" "offline offline" "nav main";
   }
   .top { grid-area: top; padding: 14px 28px; }
   .wordmark { height: 56px; }
   .offline { grid-area: offline; padding: 8px 28px; }
+  .install-banner { grid-area: install; padding: 12px 28px; }
 
   /* Sidebar continues the slate header, forming an L around the cream content */
   .tabs {
@@ -342,3 +343,15 @@ button.off, .choices button:disabled { cursor: not-allowed; }
 .ghost.danger { color: var(--red); }
 /* Inline text button, e.g. "Scan the discharge sheet here instead" */
 button.link { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--slate); font-weight: 600; text-decoration: underline; font-size: inherit; }
+
+/* Calm style for "Good to know" label notes (alcohol, grapefruit, food) */
+.flag.label-note { box-shadow: inset 10px 0 0 var(--line); }
+.flag.label-note .stripe { background: var(--cream); color: var(--muted); border: 1px solid var(--line); }
+
+/* One-time install banner */
+.install-banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--paper); border-bottom: 1.5px solid var(--line); padding: 12px 18px; }
+.install-text { flex: 1 1 260px; }
+.install-text p { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted); }
+.install-actions { display: flex; gap: 8px; }
+.share-icon { display: inline-block; font-weight: 700; padding: 0 8px; border: 1.5px solid var(--slate); border-radius: 999px; color: var(--slate); font-size: 0.8rem; line-height: 1.5; }
+.share-icon::before { content: "⇧ "; }

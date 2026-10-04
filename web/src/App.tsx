@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import InstallBanner from "./InstallBanner";
 import { clearReminders, scheduleReminders } from "./reminders";
 import { buildSchedule } from "./schedule";
 import { useAppState, type App as AppModel } from "./store";
@@ -81,6 +82,8 @@ function MainApp() {
           </label>
         </div>
       </header>
+
+      <InstallBanner />
 
       {!online && (
         <p className="offline no-print" role="status">

@@ -1,4 +1,5 @@
 import type { Medication, OtcCheckResponse, Profile, ReconcileResponse, SafetyFlag, SafetyReport, ScanResult } from "./types";
+import { shrinkImage } from "./shrinkImage";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -15,7 +16,7 @@ async function json<T>(res: Response): Promise<T> {
 
 export async function scanImage(file: File): Promise<ScanResult> {
   const body = new FormData();
-  body.append("file", file);
+  body.append("file", await shrinkImage(file)); // big phone photos -> ~2000px JPEG
   return json(await fetch("/api/scan", { method: "POST", body }));
 }
 
