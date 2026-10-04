@@ -386,3 +386,24 @@ label.check input { width: 22px; height: 22px; margin: 0; accent-color: var(--sl
 /* Right-to-left languages (Arabic, Urdu, Persian, Hebrew, Pashto) */
 [dir="rtl"] .lang-list button, [dir="rtl"] .med-edit, [dir="rtl"] .typed { text-align: right; }
 [dir="rtl"] .lang-list button { align-items: flex-end; }
+
+/* Text size (Profile > Display, and the welcome screen). All sizes are rem, so this scales everything. */
+html[data-text-size="large"] { font-size: 21px; }
+html[data-text-size="xl"] { font-size: 24px; }
+/* Keep the 5-tab phone bar on one line at bigger sizes */
+@media (max-width: 899px) {
+  html[data-text-size="large"] .tabs button { font-size: 0.78rem; }
+  html[data-text-size="xl"] .tabs button { font-size: 0.66rem; }
+}
+.text-size .seg button { flex-direction: column; gap: 2px; min-width: 28%; line-height: 1.2; padding: 8px 10px; }
+.text-size .aa { font-weight: 700; line-height: 1; }
+.card.display { padding-bottom: 8px; }
+.card .seg-group legend { color: var(--cream); }
+
+/* How it works / not medical advice */
+.about-note { background: var(--paper); border-radius: 24px; padding: 14px 20px 10px; margin: 18px 0; text-align: left; }
+.about-note h3 { margin-top: 0; }
+.about-note ul { padding-left: 20px; margin: 6px 0 10px; }
+.about-note li { margin-bottom: 6px; font-size: 0.92rem; }
+.about-warning { background: var(--amber-bg); color: var(--amber-ink); border-radius: 16px; padding: 10px 14px; font-size: 0.9rem; }
+@media (min-width: 900px) { .about-note { max-width: 760px; } }

@@ -3,6 +3,8 @@ import { DEFAULT_ROUTINE, type Routine } from "./schedule";
 import { deviceLanguage } from "./languages";
 import type { Medication, Profile } from "./types";
 
+export type TextSize = "normal" | "large" | "xl";
+
 export interface AppState {
   profiles: Profile[];
   activeId: string;
@@ -12,6 +14,7 @@ export interface AppState {
   photos: Record<string, string>; // med id -> label thumbnail (data URL). Local only, kept out of Medication so it never reaches the API
   uiLanguage: string; // language of the app's own text (per device); each profile has its own explanation language
   onboarded: boolean; // false until the welcome screens are finished or skipped
+  textSize: TextSize; // per device: bigger text for older eyes
 }
 
 const KEY = "apothecary:v1";
@@ -37,7 +40,7 @@ function loadPhotos(): Record<string, string> {
 }
 
 function initial(): AppState {
-  const base = { routine: {}, remindersOn: false, photos: loadPhotos(), uiLanguage: deviceLanguage().name, onboarded: false };
+  const base = { routine: {}, remindersOn: false, photos: loadPhotos(), uiLanguage: deviceLanguage().name, onboarded: false, textSize: "normal" as TextSize };
   try {
     const raw = localStorage.getItem(KEY);
     // Older saves lack the newer fields. Someone who already used the app skips the welcome screens.
@@ -118,6 +121,7 @@ export function useAppState() {
     setRoutine: (r: Routine) => setState((s) => ({ ...s, routine: { ...s.routine, [profile.id]: r } })),
     setRemindersOn: (on: boolean) => setState((s) => ({ ...s, remindersOn: on })),
     setUiLanguage: (language: string) => setState((s) => ({ ...s, uiLanguage: language })),
+    setTextSize: (textSize: TextSize) => setState((s) => ({ ...s, textSize })),
     // Welcome screens: fill in the first profile and mark setup done
     finishOnboarding: (p?: Partial<Profile>) =>
       setState((s) => {

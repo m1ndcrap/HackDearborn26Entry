@@ -60,6 +60,10 @@ function MainApp() {
   useReminders(app);
   // Translate the app's own text whenever the chosen language changes (English = no-op)
   useEffect(() => setUiLanguage(app.state.uiLanguage), [app.state.uiLanguage]);
+  // Text size applies to the whole page (all sizes are in rem)
+  useEffect(() => {
+    document.documentElement.dataset.textSize = app.state.textSize;
+  }, [app.state.textSize]);
 
   if (!app.state.onboarded) return <Onboarding app={app} />;
 

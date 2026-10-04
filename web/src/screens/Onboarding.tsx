@@ -1,5 +1,7 @@
 import { useState } from "react";
+import AboutNote from "../AboutNote";
 import LanguagePicker from "../LanguagePicker";
+import TextSizePicker from "../TextSizePicker";
 import type { App } from "../store";
 import type { ReadingLevel } from "../types";
 
@@ -49,6 +51,8 @@ export default function Onboarding({ app }: { app: App }) {
               <li>Builds a daily schedule and an emergency medication passport</li>
             </ul>
             <LanguagePicker label="Choose the app's language" value={app.state.uiLanguage} onChange={app.setUiLanguage} />
+            <TextSizePicker value={app.state.textSize} onChange={app.setTextSize} />
+            <AboutNote />
             <div className="actions">
               <button className="primary" onClick={() => setStep(1)}>
                 Continue
@@ -118,6 +122,9 @@ export default function Onboarding({ app }: { app: App }) {
                 ))}
               </div>
             </fieldset>
+            <p className="disclaimer">
+              By continuing, you understand Pocket Apothecary doesn't give medical advice. Check with a pharmacist or doctor before changing any medicine.
+            </p>
             <div className="actions">
               <button className="primary" onClick={finish}>
                 Start using the app
