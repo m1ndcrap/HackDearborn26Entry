@@ -18,6 +18,9 @@ export interface Medication {
   verified_by?: string | null;
   strength_verified?: boolean;
   strength_options?: string[];
+  // Kept on the device only (the API ignores them): YYYY-MM-DD
+  refill_date?: string | null;
+  expires_on?: string | null;
 }
 
 export interface ScanResult {

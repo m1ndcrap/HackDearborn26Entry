@@ -90,6 +90,11 @@ export function useAppState() {
         cabinet: { ...s.cabinet, [profile.id]: [...(s.cabinet[profile.id] ?? []).filter((m) => !replaceIds.includes(m.id)), ...added] },
         photos: { ...without(s.photos, replaceIds), ...(photo ? Object.fromEntries(added.map((m) => [m.id, photo])) : {}) },
       })),
+    updateMed: (med: Medication) =>
+      setState((s) => ({
+        ...s,
+        cabinet: { ...s.cabinet, [profile.id]: (s.cabinet[profile.id] ?? []).map((m) => (m.id === med.id ? med : m)) },
+      })),
     removeMed: (id: string) =>
       setState((s) => ({
         ...s,

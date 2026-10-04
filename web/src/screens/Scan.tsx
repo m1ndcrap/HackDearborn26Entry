@@ -3,6 +3,8 @@ import { scanImage } from "../api";
 import { makeThumbnail } from "../thumbnail";
 import { DEFAULT_ACTION, describeMatch, findCabinetMatch, type DupAction } from "../duplicates";
 import type { Medication } from "../types";
+import ManualAdd from "./ManualAdd";
+import type { Routine } from "../schedule";
 import { useOnline } from "../useOnline";
 
 const LOW = 0.7;
@@ -81,10 +83,12 @@ export function CameraView({ onShot, onCancel }: { onShot: (f: File) => void; on
 
 interface ScanProps {
   cabinet: Medication[];
+  routine?: Routine;
   onAdd: (meds: Medication[], replaceIds: string[], photo: string | null) => void;
+  onBuyCheck?: () => void;
 }
 
-export default function Scan({ cabinet, onAdd }: ScanProps) {
+export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
@@ -92,6 +96,7 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
   const [choices, setChoices] = useState<Record<string, DupAction>>({}); // scanned med id -> what to do with its cabinet match
   const online = useOnline();
   const [live, setLive] = useState(false);
+  const [typing, setTyping] = useState(false);
   const libraryRef = useRef<HTMLInputElement>(null);
   const nativeCameraRef = useRef<HTMLInputElement>(null);
 
@@ -123,6 +128,23 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
   const edit = (id: string, patch: Partial<Medication>) => setFound((f) => f && f.map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
   if (live) return <CameraView onShot={pick} onCancel={() => setLive(false)} />;
+
+  if (typing) {
+    return (
+      <ManualAdd
+        routine={routine}
+        onCancel={() => setTyping(false)}
+        onSave={(med) => {
+          setTyping(false);
+          setPhoto(null);
+          if (findCabinetMatch(med, cabinet)) {
+            setFound([med]);
+            setChoices({});
+          } else onAdd([med], [], null);
+        }}
+      />
+    );
+  }
 
   if (found && found.length > 0) {
     // Recomputed every render so it follows edits to the name or strength
@@ -225,7 +247,18 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
         <button className="secondary" onClick={() => libraryRef.current?.click()} disabled={busy || !online}>
           Choose from photo library
         </button>
+        <button className="secondary" onClick={() => setTyping(true)} disabled={busy}>
+          Type it in instead
+        </button>
       </div>
+      {onBuyCheck && (
+        <div className="buy-entry">
+          <p>At the store?</p>
+          <button className="ghost" onClick={onBuyCheck} disabled={busy}>
+            Check before buying →
+          </button>
+        </div>
+      )}
       {!online && <p className="hint">Scanning needs a connection. Your cabinet still works offline.</p>}
       {/* Hidden inputs: the library picker has no capture attribute; the native-camera one is the fallback when live camera isn't available (e.g. http on a phone). */}
       <input ref={libraryRef} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />

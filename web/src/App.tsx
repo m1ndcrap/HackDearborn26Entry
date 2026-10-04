@@ -96,10 +96,23 @@ function MainApp() {
       </nav>
 
       <main>
-        {tab === "cabinet" && <Cabinet meds={app.meds} photos={app.state.photos} profile={app.profile} onScan={() => setTab("scan")} onBuyCheck={() => setTab("buy")} onRemove={app.removeMed} />}
+        {tab === "cabinet" && (
+          <Cabinet
+            meds={app.meds}
+            photos={app.state.photos}
+            profile={app.profile}
+            routine={app.routine}
+            onScan={() => setTab("scan")}
+            onBuyCheck={() => setTab("buy")}
+            onRemove={app.removeMed}
+            onUpdate={app.updateMed}
+          />
+        )}
         {tab === "scan" && (
           <Scan
             cabinet={app.meds}
+            routine={app.routine}
+            onBuyCheck={() => setTab("buy")}
             onAdd={(meds, replaceIds, photo) => {
               app.addMeds(meds, replaceIds, photo);
               setTab("report");

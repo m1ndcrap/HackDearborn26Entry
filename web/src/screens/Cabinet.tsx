@@ -1,12 +1,17 @@
+import { useState } from "react";
+import type { Routine } from "../schedule";
 import type { Medication, Profile } from "../types";
+import ManualAdd from "./ManualAdd";
 
 interface Props {
   meds: Medication[];
   photos: Record<string, string>; // med id -> label thumbnail
   profile: Profile;
+  routine?: Routine;
   onScan: () => void;
   onBuyCheck: () => void;
   onRemove: (id: string) => void;
+  onUpdate: (med: Medication) => void;
 }
 
 // Shown when a medicine has no label photo (typed in, discharge sheet, or added before photos existed)
@@ -22,7 +27,50 @@ function PillBottleIcon() {
 
 const orNot = (v: string | null | undefined, empty: string) => (v && v.trim()) || empty;
 
-export default function Cabinet({ meds, photos, profile, onScan, onBuyCheck, onRemove }: Props) {
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+function daysUntil(iso?: string | null): number | null {
+  if (!iso || !ISO.test(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86_400_000);
+}
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+function badges(m: Medication) {
+  const out: { text: string; tone: "red" | "amber" | "plain" }[] = [];
+  const exp = daysUntil(m.expires_on);
+  if (exp !== null) {
+    if (exp < 0) out.push({ text: "Expired, don't use", tone: "red" });
+    else if (exp <= 30) out.push({ text: exp === 0 ? "Expires today" : `Expires in ${plural(exp, "day")}`, tone: "amber" });
+  }
+  const refill = daysUntil(m.refill_date);
+  if (refill !== null) {
+    if (refill < 0) out.push({ text: "Refill overdue", tone: "red" });
+    else if (refill <= 7) out.push({ text: refill === 0 ? "Refill today" : `Refill in ${plural(refill, "day")}`, tone: "amber" });
+    else out.push({ text: `Refill ${new Date(m.refill_date + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}`, tone: "plain" });
+  }
+  return out;
+}
+
+export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyCheck, onRemove, onUpdate }: Props) {
+  const [editing, setEditing] = useState<Medication | null>(null);
+
+  if (editing) {
+    return (
+      <ManualAdd
+        initial={editing}
+        routine={routine}
+        submitLabel="Save changes"
+        onCancel={() => setEditing(null)}
+        onSave={(med) => {
+          onUpdate(med);
+          setEditing(null);
+        }}
+      />
+    );
+  }
+
   if (meds.length === 0) {
     return (
       <section className="empty">
@@ -42,35 +90,57 @@ export default function Cabinet({ meds, photos, profile, onScan, onBuyCheck, onR
   return (
     <section>
       <h2>{profile.name}'s cabinet</h2>
+      <p className="hint">Tap a medicine to change its dose, how often, or refill and expiry dates.</p>
       <div className="cabinet-box">
         <ul className="meds">
-          {meds.map((m) => (
-            <li key={m.id}>
-              <h3 className="med-name">{m.name}</h3>
-              <div className="med-card">
-                <div className="med-photo">{photos[m.id] ? <img src={photos[m.id]} alt="" /> : <PillBottleIcon />}</div>
-                <dl className="med-facts">
-                  <div>
-                    <dt>Dosage:</dt> <dd>{orNot([m.strength, m.dose].filter(Boolean).join(" · "), "Not listed")}</dd>
-                  </div>
-                  <div>
-                    <dt>Frequency:</dt> <dd>{orNot(m.frequency, "Not listed")}</dd>
-                  </div>
-                  <div>
-                    <dt>Instructions:</dt> <dd>{orNot(m.instructions, "None")}</dd>
-                  </div>
-                </dl>
-                <button className="med-remove" onClick={() => onRemove(m.id)} aria-label={`Remove ${m.name}`}>
-                  ×
-                </button>
-              </div>
-            </li>
-          ))}
+          {meds.map((m) => {
+            const b = badges(m);
+            return (
+              <li key={m.id}>
+                <h3 className="med-name">{m.name}</h3>
+                <div className="med-card">
+                  {/* The whole card (photo + facts) is one button that opens the edit form */}
+                  <button className="med-edit" onClick={() => setEditing(m)} aria-label={`Edit ${m.name}`}>
+                    <span className="med-photo">{photos[m.id] ? <img src={photos[m.id]} alt="" /> : <PillBottleIcon />}</span>
+                    <span className="med-facts">
+                      <span className="fact">
+                        Dosage: <span className="fact-val">{orNot([m.strength, m.dose].filter(Boolean).join(" · "), "Not listed")}</span>
+                      </span>
+                      <span className="fact">
+                        Frequency: <span className="fact-val">{orNot(m.frequency, "Not listed")}</span>
+                      </span>
+                      <span className="fact">
+                        Instructions: <span className="fact-val">{orNot(m.instructions, "None")}</span>
+                      </span>
+                      {b.length > 0 && (
+                        <span className="tags med-badges">
+                          {b.map((x) => (
+                            <span key={x.text} className={`tag date-${x.tone}`}>
+                              {x.text}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  <button
+                    className="med-remove"
+                    onClick={() => {
+                      if (confirm(`Remove ${m.name} from ${profile.name}'s cabinet?`)) onRemove(m.id);
+                    }}
+                    aria-label={`Remove ${m.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
       <div className="actions center">
         <button className="primary" onClick={onScan}>
-          Scan a label
+          Add another
         </button>
         <button className="secondary" onClick={onBuyCheck}>
           Check before buying
