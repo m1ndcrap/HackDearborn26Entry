@@ -73,6 +73,33 @@ class ExplainResponse(BaseModel):
     text: str
 
 
+DischargeStatus = Literal["start", "change", "continue", "stop", "unclear"]
+ReconcileKind = Literal["new", "changed", "stopped", "duplicate", "unchanged", "not_on_sheet"]
+
+
+class DischargeMed(Medication):
+    """A line on a discharge sheet: the medicine plus what the hospital says to do with it."""
+    status: DischargeStatus = Field(default="unclear", description="start, change, continue, stop, or unclear")
+    previous: Optional[str] = Field(default=None, description="Old dose if the sheet prints it, e.g. 'was 2.5 mg'")
+
+
+class ReconcileItem(BaseModel):
+    id: str
+    kind: ReconcileKind
+    sheet: Optional[DischargeMed] = None  # the discharge-sheet line (None for not_on_sheet)
+    cabinet: Optional[Medication] = None  # the matching cabinet entry, if any
+    shared: list[str] = Field(default_factory=list)  # ingredients both contain (duplicate)
+    summary: str  # one plain-language sentence for the family
+
+
+class ReconcileResponse(BaseModel):
+    document_type: str
+    items: list[ReconcileItem]
+    after: list[Medication]  # the cabinet if every suggested change is applied
+    report: SafetyReport  # safety check on `after`
+    resolved: list[SafetyFlag]  # flags in today's cabinet that the changes remove
+
+
 class OTCCheckRequest(BaseModel):
     profile: Profile
     cabinet: list[Medication]  # what the person already takes

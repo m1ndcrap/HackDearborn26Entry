@@ -10,6 +10,8 @@ interface Props {
   routine?: Routine;
   onScan: () => void;
   onBuyCheck: () => void;
+  onDischarge: () => void;
+  onAddByHand: () => void;
   onRemove: (id: string) => void;
   onUpdate: (med: Medication) => void;
 }
@@ -53,7 +55,7 @@ function badges(m: Medication) {
   return out;
 }
 
-export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyCheck, onRemove, onUpdate }: Props) {
+export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyCheck, onDischarge, onAddByHand, onRemove, onUpdate }: Props) {
   const [editing, setEditing] = useState<Medication | null>(null);
 
   if (editing) {
@@ -80,8 +82,14 @@ export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyC
           <button className="primary" onClick={onScan}>
             Scan a label
           </button>
+          <button className="secondary" onClick={onAddByHand}>
+            Add by hand
+          </button>
           <button className="secondary" onClick={onBuyCheck}>
             Check before buying
+          </button>
+          <button className="secondary" onClick={onDischarge}>
+            Home from the hospital
           </button>
         </div>
       </section>
@@ -89,6 +97,10 @@ export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyC
   }
   return (
     <section>
+      <button className="discharge-cta" onClick={onDischarge}>
+        <strong>Home from the hospital?</strong>
+        <span>Scan the discharge sheet to see what's new, changed, or stopped.</span>
+      </button>
       <h2>{profile.name}'s cabinet</h2>
       <p className="hint">Tap a medicine to change its dose, how often, or refill and expiry dates.</p>
       <div className="cabinet-box">
@@ -141,6 +153,9 @@ export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyC
       <div className="actions center">
         <button className="primary" onClick={onScan}>
           Add another
+        </button>
+        <button className="secondary" onClick={onAddByHand}>
+          Add by hand
         </button>
         <button className="secondary" onClick={onBuyCheck}>
           Check before buying

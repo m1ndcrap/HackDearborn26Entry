@@ -7,11 +7,13 @@ import Cabinet from "./screens/Cabinet";
 import Passport, { SharedPassport } from "./screens/Passport";
 import ProfileScreen from "./screens/ProfileScreen";
 import Report from "./screens/Report";
+import AddMed from "./screens/AddMed";
 import BuyCheck from "./screens/BuyCheck";
+import Discharge from "./screens/Discharge";
 import Scan from "./screens/Scan";
 import Schedule from "./screens/Schedule";
 
-type Tab = "cabinet" | "scan" | "report" | "schedule" | "passport" | "profile" | "buy";
+type Tab = "cabinet" | "scan" | "report" | "schedule" | "passport" | "profile" | "buy" | "discharge" | "add";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "cabinet", label: "Cabinet" },
@@ -104,8 +106,31 @@ function MainApp() {
             routine={app.routine}
             onScan={() => setTab("scan")}
             onBuyCheck={() => setTab("buy")}
+            onDischarge={() => setTab("discharge")}
+            onAddByHand={() => setTab("add")}
             onRemove={app.removeMed}
             onUpdate={app.updateMed}
+          />
+        )}
+        {tab === "add" && (
+          <AddMed
+            profile={app.profile}
+            cabinet={app.meds}
+            onSave={(med, replaceIds) => {
+              app.addMeds([med], replaceIds);
+              setTab("cabinet");
+            }}
+            onCancel={() => setTab("cabinet")}
+          />
+        )}
+        {tab === "discharge" && (
+          <Discharge
+            profile={app.profile}
+            cabinet={app.meds}
+            onApply={(added, removeIds) => {
+              app.addMeds(added, removeIds);
+              setTab("report");
+            }}
           />
         )}
         {tab === "scan" && (

@@ -64,6 +64,31 @@ export interface OtcCheckResponse {
   checked_against: number;
 }
 
+export type DischargeStatus = "start" | "change" | "continue" | "stop" | "unclear";
+export type ReconcileKind = "new" | "changed" | "stopped" | "duplicate" | "unchanged" | "not_on_sheet";
+
+export interface DischargeMed extends Medication {
+  status: DischargeStatus;
+  previous?: string | null; // old dose if the sheet prints it
+}
+
+export interface ReconcileItem {
+  id: string;
+  kind: ReconcileKind;
+  sheet?: DischargeMed | null; // the discharge-sheet line (none for not_on_sheet)
+  cabinet?: Medication | null; // the matching cabinet entry, if any
+  shared: string[]; // ingredients both contain (duplicate)
+  summary: string;
+}
+
+export interface ReconcileResponse {
+  document_type: string;
+  items: ReconcileItem[];
+  after: Medication[]; // the cabinet if every suggested change is applied
+  report: SafetyReport; // safety check on `after`
+  resolved: SafetyFlag[]; // flags in today's cabinet that the changes remove
+}
+
 export interface SafetyReport {
   flags: SafetyFlag[];
   checked: number;

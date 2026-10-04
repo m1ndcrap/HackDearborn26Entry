@@ -316,3 +316,25 @@ button.off, .choices button:disabled { cursor: not-allowed; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; margin-bottom: 14px; }
   .cards .card { margin: 0; max-width: none; }
 }
+/* Discharge reconciliation: one card per medicine, colored like the safety flags */
+.discharge-cta { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; margin-bottom: 18px; padding: 14px 16px; text-align: left; background: var(--paper); border: 1.5px solid var(--slate); border-left-width: 8px; color: var(--slate); font-weight: 400; }
+.discharge-cta strong { color: var(--slate); font-size: 1.05rem; }
+.discharge-cta span { color: var(--muted); font-size: 0.9rem; }
+.recon-counts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.recon-counts .count { font-weight: 700; font-size: 0.85rem; padding: 3px 10px; border-radius: 4px; background: var(--cream); border: 1.5px solid var(--line); }
+.recon-head { margin-top: 22px; }
+.recon { background: var(--paper); border: 1.5px solid var(--line); border-left-width: 10px; border-radius: 10px; padding: 12px 14px 6px; margin-bottom: 12px; }
+.recon h3 { margin-top: 2px; }
+.recon .stripe { display: inline-block; font-weight: 800; font-size: 0.85rem; padding: 3px 10px; border-radius: 3px; margin-bottom: 4px; background: var(--cream); }
+.recon .dup { border: 0; background: none; padding: 0; margin: 4px 0 6px; }
+.recon.stopped, .count.stopped { border-left-color: var(--red); }
+.recon.stopped .stripe, .count.stopped { background: var(--red); color: #fff; border-color: var(--red); }
+.recon.changed, .recon.duplicate { border-left-color: var(--amber); }
+.recon.changed .stripe, .recon.duplicate .stripe, .count.changed, .count.duplicate { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+.recon.new { border-left-color: var(--slate); }
+.recon.new .stripe, .count.new { background: var(--slate); color: #fff; border-color: var(--slate); }
+.recon.unchanged { border-left-color: var(--green); }
+.recon.unchanged .stripe, .count.unchanged { background: var(--green-bg); color: #1d4f39; border-color: var(--green); }
+.recon.not_on_sheet { border-left-color: var(--muted); }
+.recon-safety { margin-top: 30px; }
+.ok ul { margin: 6px 0 0; padding-left: 20px; }

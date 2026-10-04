@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from pydantic import create_model
 
-from .models import ExplainRequest, Medication, ScanResult
+from .models import DischargeMed, ExplainRequest, Medication, ScanResult
 
 load_dotenv()
 log = logging.getLogger("uvicorn.error")
@@ -113,6 +113,78 @@ def extract_medications(image: bytes, mime_type: str) -> ScanResult:
     if parsed is None:
         raise ValueError("Gemini returned no parseable result")
     return ScanResult.model_validate(parsed.model_dump())
+
+
+DISCHARGE_PROMPT = """You are reading a hospital discharge medication list or after-visit summary.
+Return one entry for EVERY medication listed, including ones the patient is told to stop.
+
+For each medication:
+- `status`, from the section heading or wording next to it:
+  - "start": new medication ("NEW", "START taking", "begin")
+  - "change": dose or timing changed ("CHANGED", "take the NEW way", "increase", "decrease")
+  - "continue": keep taking as before ("CONTINUE", "no change", "keep taking", "resume")
+  - "stop": "STOP taking", "discontinue", "do not take", "hold"
+  - "unclear": listed with no instruction about whether to take it
+- `name`: the drug name as printed, without strength. If brands follow in parentheses, use the first name:
+  "Ibuprofen (Advil, Motrin)" -> "Ibuprofen".
+- `ingredient`: generic active ingredient in lowercase without salt words (sodium, HCl, succinate, ER), e.g. "metoprolol".
+- `strength`, `dose`, `frequency`: as printed. For "change", use the NEW values.
+- `previous`: the old dose if printed (e.g. "was 2.5 mg" -> "2.5 mg"), else null.
+- `instructions`: other directions (with food, until finished, check INR), or null.
+- `confidence` 0-1: below 0.7 if blurry, handwritten, cut off, or the status had to be guessed.
+
+Rules:
+- Copy values as printed. Never invent a dose. Use null when not visible.
+- Ignore patient details, dates, appointments, lab values, diet and activity instructions.
+- If this is not a medication list, return an empty `medications` list and document_type "unknown".
+- `document_type`: discharge_sheet, pill_bottle, otc_box or unknown."""
+
+_DISCHARGE_FIELDS = ["name", "ingredient", "strength", "dose", "frequency", "instructions", "confidence", "status", "previous"]
+_SheetMed = create_model("SheetMed", **{k: (DischargeMed.model_fields[k].annotation, DischargeMed.model_fields[k]) for k in _DISCHARGE_FIELDS})
+_SheetRead = create_model(
+    "SheetRead",
+    document_type=(ScanResult.model_fields["document_type"].annotation, "unknown"),
+    medications=(list[_SheetMed], ...),  # type: ignore[valid-type]
+)
+
+
+def _mock_discharge() -> tuple[str, list[DischargeMed]]:
+    """The demo story: grandpa home after a heart scare (see README)."""
+    rows = [
+        ("start", "Lisinopril", "lisinopril", "10 mg", "1 tablet", "once daily", None),
+        ("start", "Acetaminophen", "acetaminophen", "650 mg", "1 tablet", "every 6 hours as needed for pain", None),
+        ("change", "Warfarin", "warfarin", "5 mg", "1 tablet", "once daily in the evening", "2.5 mg"),
+        ("continue", "Sertraline", "sertraline", "50 mg", "1 tablet", "every morning", None),
+        ("stop", "Ibuprofen", "ibuprofen", None, None, None, None),
+    ]
+    return "discharge_sheet", [
+        DischargeMed(status=s, name=n, ingredient=i, strength=st, dose=d, frequency=f, previous=p, confidence=0.9)
+        for s, n, i, st, d, f, p in rows
+    ]
+
+
+def extract_discharge(image: bytes, mime_type: str) -> tuple[str, list[DischargeMed]]:
+    """Every medication on a discharge sheet with its start/change/continue/stop status."""
+    if mock_mode():
+        return _mock_discharge()
+
+    from google.genai import types
+
+    start = time.perf_counter()
+    resp = _get_client().models.generate_content(
+        model=MODEL,
+        contents=[types.Part.from_bytes(data=image, mime_type=mime_type), DISCHARGE_PROMPT],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=_SheetRead,
+            media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+        ),
+    )
+    log.info("discharge model=%s bytes=%d %.1fs -> %s", MODEL, len(image), time.perf_counter() - start, resp.text)
+    parsed = resp.parsed
+    if parsed is None:
+        raise ValueError("Gemini returned no parseable result")
+    return parsed.document_type, [DischargeMed.model_validate(m.model_dump()) for m in parsed.medications]
 
 
 LEVELS = {
