@@ -82,6 +82,14 @@ function MainApp() {
         </p>
       )}
 
+      <nav className="tabs no-print" aria-label="Main">
+        {TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? "on" : ""} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
       <main>
         {tab === "cabinet" && <Cabinet meds={app.meds} profile={app.profile} onScan={() => setTab("scan")} onBuyCheck={() => setTab("buy")} onRemove={app.removeMed} />}
         {tab === "scan" && (
@@ -99,14 +107,6 @@ function MainApp() {
         {tab === "passport" && <Passport app={app} />}
         {tab === "profile" && <ProfileScreen app={app} />}
       </main>
-
-      <nav className="tabs no-print" aria-label="Main">
-        {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? "on" : ""} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }

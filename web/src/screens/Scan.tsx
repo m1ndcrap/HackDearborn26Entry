@@ -138,64 +138,66 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
       <section>
         <h2>Check what we read</h2>
         <p className="hint">Fix anything that looks wrong before adding. Highlighted rows were harder to read.</p>
-        {found.map((m) => {
-          const match = matches[m.id];
-          const dup = match && describeMatch(match);
-          return (
-            <div key={m.id} className={"card" + (m.confidence < LOW ? " shaky" : "")}>
-              {m.confidence < LOW && <div className="badge">Double-check this one</div>}
-              {m.verified_by && (
-                <p className="hint">
-                  ✓ {m.ingredient} · matched in {m.verified_by}
-                  {m.strength_verified ? "" : " (check the strength)"}
-                </p>
-              )}
-              {match && dup && (
-                <fieldset className={"dup " + match.kind}>
-                  <legend>{dup.message}</legend>
-                  {dup.options.map((o) => (
-                    <label key={o.value} className="opt">
-                      <input
-                        type="radio"
-                        name={`dup-${m.id}`}
-                        checked={actionFor(m.id) === o.value}
-                        onChange={() => setChoices((c) => ({ ...c, [m.id]: o.value }))}
-                      />
-                      {o.label}
-                    </label>
-                  ))}
-                </fieldset>
-              )}
-              <label>
-                Name
-                <input value={m.name} onChange={(e) => edit(m.id, { name: e.target.value, ingredient: null, rxcui: null, verified_by: null })} />
-              </label>
-              <div className="row">
+        <div className="cards">
+          {found.map((m) => {
+            const match = matches[m.id];
+            const dup = match && describeMatch(match);
+            return (
+              <div key={m.id} className={"card" + (m.confidence < LOW ? " shaky" : "")}>
+                {m.confidence < LOW && <div className="badge">Double-check this one</div>}
+                {m.verified_by && (
+                  <p className="hint">
+                    ✓ {m.ingredient} · matched in {m.verified_by}
+                    {m.strength_verified ? "" : " (check the strength)"}
+                  </p>
+                )}
+                {match && dup && (
+                  <fieldset className={"dup " + match.kind}>
+                    <legend>{dup.message}</legend>
+                    {dup.options.map((o) => (
+                      <label key={o.value} className="opt">
+                        <input
+                          type="radio"
+                          name={`dup-${m.id}`}
+                          checked={actionFor(m.id) === o.value}
+                          onChange={() => setChoices((c) => ({ ...c, [m.id]: o.value }))}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
                 <label>
-                  Strength
-                  <input
-                    value={m.strength ?? ""}
-                    list={`strengths-${m.id}`}
-                    placeholder={m.strength_options?.length ? "Pick or type" : ""}
-                    onChange={(e) => edit(m.id, { strength: e.target.value })}
-                  />
-                  {/* Real strengths from RxNorm, so a missing or misread strength can be picked instead of typed */}
-                  <datalist id={`strengths-${m.id}`}>
-                    {m.strength_options?.map((s) => <option key={s} value={s} />)}
-                  </datalist>
+                  Name
+                  <input value={m.name} onChange={(e) => edit(m.id, { name: e.target.value, ingredient: null, rxcui: null, verified_by: null })} />
                 </label>
+                <div className="row">
+                  <label>
+                    Strength
+                    <input
+                      value={m.strength ?? ""}
+                      list={`strengths-${m.id}`}
+                      placeholder={m.strength_options?.length ? "Pick or type" : ""}
+                      onChange={(e) => edit(m.id, { strength: e.target.value })}
+                    />
+                    {/* Real strengths from RxNorm, so a missing or misread strength can be picked instead of typed */}
+                    <datalist id={`strengths-${m.id}`}>
+                      {m.strength_options?.map((s) => <option key={s} value={s} />)}
+                    </datalist>
+                  </label>
+                  <label>
+                    Dose
+                    <input value={m.dose ?? ""} onChange={(e) => edit(m.id, { dose: e.target.value })} />
+                  </label>
+                </div>
                 <label>
-                  Dose
-                  <input value={m.dose ?? ""} onChange={(e) => edit(m.id, { dose: e.target.value })} />
+                  How often
+                  <input value={m.frequency ?? ""} onChange={(e) => edit(m.id, { frequency: e.target.value })} />
                 </label>
               </div>
-              <label>
-                How often
-                <input value={m.frequency ?? ""} onChange={(e) => edit(m.id, { frequency: e.target.value })} />
-              </label>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
         <div className="actions">
           <button className="primary" onClick={confirm}>
             Add to cabinet
