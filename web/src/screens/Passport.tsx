@@ -8,6 +8,12 @@ import type { SafetyReport } from "../types";
 
 const SEVERITY = { high: "Talk to a pharmacist", caution: "Use caution", info: "Good to know" } as const;
 
+// "Advil label warns about Coumadin" already names both; "May not suit: kidney disease" names neither
+function withDrugs(title: string, drugs: string[]) {
+  const missing = drugs.filter((d) => !title.toLowerCase().includes(d.toLowerCase()));
+  return missing.length ? `${title} (${drugs.join(" + ")})` : title;
+}
+
 function PassportCard({ data, qr }: { data: PassportData; qr?: string }) {
   return (
     <article className="passport">
@@ -62,7 +68,7 @@ function PassportCard({ data, qr }: { data: PassportData; qr?: string }) {
           <ul className="plain">
             {data.fl.map((f, i) => (
               <li key={i}>
-                <span className={`pill ${f.s}`}>{SEVERITY[f.s]}</span> {f.t}: {f.d.join(" + ")}
+                <span className={`pill ${f.s}`}>{SEVERITY[f.s]}</span> {withDrugs(f.t, f.d)}
               </li>
             ))}
           </ul>
@@ -107,7 +113,8 @@ export default function Passport({ app }: { app: App }) {
       al: profile.allergies,
       c: profile.conditions,
       m: meds.map((m) => ({ n: m.name, s: m.strength, d: m.dose, f: m.frequency })),
-      fl: (report?.flags ?? []).map((f) => ({ s: f.severity, t: f.title, d: f.drugs })),
+      // Emergency card: interactions, allergies, conditions, duplicates. Food and alcohol notes stay on the Check screen.
+      fl: (report?.flags ?? []).filter((f) => f.kind !== "food_alcohol").map((f) => ({ s: f.severity, t: f.title, d: f.drugs })),
       at: new Date().toISOString(),
     }),
     [profile, meds, report],

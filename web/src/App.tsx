@@ -7,7 +7,6 @@ import Cabinet from "./screens/Cabinet";
 import Passport, { SharedPassport } from "./screens/Passport";
 import ProfileScreen from "./screens/ProfileScreen";
 import Report from "./screens/Report";
-import AddMed from "./screens/AddMed";
 import BuyCheck from "./screens/BuyCheck";
 import Discharge from "./screens/Discharge";
 import Scan from "./screens/Scan";
@@ -113,14 +112,16 @@ function MainApp() {
           />
         )}
         {tab === "add" && (
-          <AddMed
-            profile={app.profile}
+          // Same form and duplicate check as Scan > "Type it in", opened straight from the Cabinet
+          <Scan
             cabinet={app.meds}
-            onSave={(med, replaceIds) => {
-              app.addMeds([med], replaceIds);
+            routine={app.routine}
+            startTyping
+            onCancelTyping={() => setTab("cabinet")}
+            onAdd={(meds, replaceIds) => {
+              app.addMeds(meds, replaceIds);
               setTab("cabinet");
             }}
-            onCancel={() => setTab("cabinet")}
           />
         )}
         {tab === "discharge" && (
@@ -131,6 +132,7 @@ function MainApp() {
               app.addMeds(added, removeIds);
               setTab("report");
             }}
+            onUseScan={() => setTab("scan")}
           />
         )}
         {tab === "scan" && (
@@ -142,6 +144,7 @@ function MainApp() {
               app.addMeds(meds, replaceIds, photo);
               setTab("report");
             }}
+            onUseDischarge={() => setTab("discharge")}
           />
         )}
         {tab === "buy" && <BuyCheck profile={app.profile} cabinet={app.meds} onAdd={(med, photo) => app.addMeds([med], [], photo)} />}

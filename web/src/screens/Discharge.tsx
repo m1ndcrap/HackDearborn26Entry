@@ -61,13 +61,16 @@ function describe(m?: Medication | null) {
   return m ? [m.name, m.strength].filter(Boolean).join(" ") : "";
 }
 
+const DOC_NAMES: Record<string, string> = { pill_bottle: "a pill bottle", otc_box: "a medicine box", unknown: "something other than a discharge sheet" };
+
 interface Props {
   profile: Profile;
   cabinet: Medication[];
   onApply: (added: Medication[], removeIds: string[]) => void;
+  onUseScan: () => void; // for a single bottle or box photographed here by mistake
 }
 
-export default function Discharge({ profile, cabinet, onApply }: Props) {
+export default function Discharge({ profile, cabinet, onApply, onUseScan }: Props) {
   const online = useOnline();
   const [live, setLive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -120,6 +123,20 @@ export default function Discharge({ profile, cabinet, onApply }: Props) {
     const notes = report.flags.filter((f) => f.kind === "food_alcohol");
     return (
       <section>
+        {result.document_type !== "discharge_sheet" && (
+          <div className="verdict ask" role="alert">
+            <div className="verdict-label">Is this a discharge sheet?</div>
+            <p>
+              This looks like {DOC_NAMES[result.document_type] ?? DOC_NAMES.unknown}. To add one bottle or box, use Scan instead. The comparison below treats it
+              as a discharge list.
+            </p>
+            <div className="actions">
+              <button className="secondary" onClick={onUseScan}>
+                Use Scan instead
+              </button>
+            </div>
+          </div>
+        )}
         <h2>What changed for {profile.name}</h2>
         <p className="hint">
           We compared the discharge sheet with {profile.name}'s {cabinet.length} medicine{cabinet.length === 1 ? "" : "s"} by ingredient, so brand and

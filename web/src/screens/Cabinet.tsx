@@ -77,13 +77,13 @@ export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyC
     return (
       <section className="empty">
         <h2>{profile.name}'s cabinet is empty</h2>
-        <p>Scan a pill bottle, an over-the-counter box, or a discharge sheet to add medicines.</p>
+        <p>Scan a pill bottle or an over-the-counter box, or type one in. Home from the hospital? Use the discharge sheet check below.</p>
         <div className="choices">
           <button className="primary" onClick={onScan}>
             Scan a label
           </button>
           <button className="secondary" onClick={onAddByHand}>
-            Add by hand
+            Type it in
           </button>
           <button className="secondary" onClick={onBuyCheck}>
             Check before buying
@@ -155,7 +155,7 @@ export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyC
           Add another
         </button>
         <button className="secondary" onClick={onAddByHand}>
-          Add by hand
+          Type it in
         </button>
         <button className="secondary" onClick={onBuyCheck}>
           Check before buying

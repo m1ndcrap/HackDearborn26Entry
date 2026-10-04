@@ -49,6 +49,16 @@ export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppSt
           </label>
         </div>
       </div>
+      {app.state.profiles.length > 1 && (
+        <div className="actions">
+          <button
+            className="ghost danger"
+            onClick={() => window.confirm(`Remove ${p.name || "this person"} and their medicines from this device?`) && app.removeProfile(p.id)}
+          >
+            Remove {p.name || "this person"}
+          </button>
+        </div>
+      )}
 
       <h2>Add a family member</h2>
       <div className="card row">

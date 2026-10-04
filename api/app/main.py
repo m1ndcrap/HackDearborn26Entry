@@ -10,6 +10,8 @@ from . import gemini, openfda, otc, reconcile, rxnorm, safety, tts, drugs
 from .models import (ExplainRequest, ExplainResponse, Medication, OTCCheckRequest, OTCCheckResponse, Profile,
                      ReconcileResponse, ReportRequest, SafetyReport, ScanResult)
 
+GEMINI_BUSY = "Gemini is busy right now. Wait a few seconds and try again."
+
 app = FastAPI(title="Pocket Apothecary API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -21,7 +23,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "gemini_mock_mode": gemini.mock_mode(), "model": gemini.MODEL, "elevenlabs": tts.configured(), "openfda_key": bool(openfda.API_KEY)}
+    return {"ok": True, "gemini_mock_mode": gemini.mock_mode(), "model": gemini.MODEL, "fallback_model": gemini.FALLBACK_MODEL, "elevenlabs": tts.configured(), "openfda_key": bool(openfda.API_KEY)}
 
 
 def _identify(m: Medication) -> None:
@@ -48,7 +50,10 @@ async def scan(file: UploadFile = File(...)):
     if len(data) > 10 * 1024 * 1024:
         raise HTTPException(413, "Image too large (10 MB max)")
     try:
-        result = gemini.extract_medications(data, file.content_type or "image/jpeg")
+        # Blocking SDK call: run it on a worker thread so other requests aren't stuck behind it
+        result = await run_in_threadpool(gemini.extract_medications, data, file.content_type or "image/jpeg")
+    except gemini.GeminiBusy:
+        raise HTTPException(503, GEMINI_BUSY)
     except Exception as e:
         raise HTTPException(502, f"Couldn't read that image: {e}")
     for m in result.medications:
@@ -79,6 +84,8 @@ async def reconcile_sheet(file: UploadFile = File(...), profile: str = Form(...)
         raise HTTPException(422, f"Bad profile or cabinet: {e}")
     try:
         doc_type, sheet = await run_in_threadpool(gemini.extract_discharge, data, file.content_type or "image/jpeg")
+    except gemini.GeminiBusy:
+        raise HTTPException(503, GEMINI_BUSY)
     except Exception as e:
         raise HTTPException(502, f"Couldn't read that discharge sheet: {e}")
     if not sheet:
@@ -119,6 +126,8 @@ def check_otc(req: OTCCheckRequest):
 def explain(req: ExplainRequest):
     try:
         return ExplainResponse(text=gemini.explain_flag(req))
+    except gemini.GeminiBusy:
+        raise HTTPException(503, GEMINI_BUSY)
     except Exception as e:
         raise HTTPException(502, f"Couldn't generate an explanation: {e}")
 

@@ -4,8 +4,8 @@ import os
 import time
 from typing import Optional
 
+import httpx
 from dotenv import load_dotenv
-
 from pydantic import create_model
 
 from .models import DischargeMed, ExplainRequest, Medication, ScanResult
@@ -13,11 +13,19 @@ from .models import DischargeMed, ExplainRequest, Medication, ScanResult
 load_dotenv()
 log = logging.getLogger("uvicorn.error")
 
-# Pinned stable model ID (no -preview / -latest alias, so behavior can't shift on demo day)
+# Pinned stable model IDs (no -preview / -latest alias, so behavior can't shift on demo day).
+# The fallback runs on separate capacity and takes over when the main model is overloaded.
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
 API_KEY = os.getenv("GEMINI_API_KEY", "")
 
+RETRYABLE = {429, 500, 502, 503, 504}  # rate limit, "high demand", transient server errors
+
 _client = None
+
+
+class GeminiBusy(Exception):
+    """Every attempt hit overload or a network error; trying again in a moment usually works."""
 
 
 def mock_mode() -> bool:
@@ -31,6 +39,27 @@ def _get_client():
 
         _client = genai.Client(api_key=API_KEY)
     return _client
+
+
+def _generate(**kwargs):
+    """generate_content that survives demand spikes and network blips: main model, a short pause,
+    main model again, then the fallback model. Returns (model_used, response)."""
+    from google.genai import errors
+
+    last: Exception | None = None
+    attempts = [(MODEL, 0.0), (MODEL, 1.5)] + ([(FALLBACK_MODEL, 0.0)] if FALLBACK_MODEL and FALLBACK_MODEL != MODEL else [])
+    for model, pause in attempts:
+        time.sleep(pause)
+        try:
+            return model, _get_client().models.generate_content(model=model, **kwargs)
+        except errors.APIError as e:
+            if e.code not in RETRYABLE:
+                raise  # bad key, bad request, unknown model: retrying won't help
+            last = e
+        except (httpx.TransportError, OSError) as e:  # DNS and connection failures
+            last = e
+        log.warning("gemini %s failed, trying again: %s", model, str(last)[:200])
+    raise GeminiBusy(str(last))
 
 
 SCAN_PROMPT = """You are reading a photo of a medication label: a pharmacy pill bottle or an over-the-counter box.
@@ -98,8 +127,7 @@ def extract_medications(image: bytes, mime_type: str) -> ScanResult:
     from google.genai import types
 
     start = time.perf_counter()
-    resp = _get_client().models.generate_content(
-        model=MODEL,
+    model, resp = _generate(
         contents=[types.Part.from_bytes(data=image, mime_type=mime_type), SCAN_PROMPT],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -108,7 +136,7 @@ def extract_medications(image: bytes, mime_type: str) -> ScanResult:
         ),
     )
     # One line per scan, so extraction can be checked with `docker compose logs -f api`
-    log.info("scan model=%s bytes=%d %.1fs -> %s", MODEL, len(image), time.perf_counter() - start, resp.text)
+    log.info("scan model=%s bytes=%d %.1fs -> %s", model, len(image), time.perf_counter() - start, resp.text)
     parsed = resp.parsed
     if parsed is None:
         raise ValueError("Gemini returned no parseable result")
@@ -171,8 +199,7 @@ def extract_discharge(image: bytes, mime_type: str) -> tuple[str, list[Discharge
     from google.genai import types
 
     start = time.perf_counter()
-    resp = _get_client().models.generate_content(
-        model=MODEL,
+    model, resp = _generate(
         contents=[types.Part.from_bytes(data=image, mime_type=mime_type), DISCHARGE_PROMPT],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -180,7 +207,7 @@ def extract_discharge(image: bytes, mime_type: str) -> tuple[str, list[Discharge
             media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
         ),
     )
-    log.info("discharge model=%s bytes=%d %.1fs -> %s", MODEL, len(image), time.perf_counter() - start, resp.text)
+    log.info("discharge model=%s bytes=%d %.1fs -> %s", model, len(image), time.perf_counter() - start, resp.text)
     parsed = resp.parsed
     if parsed is None:
         raise ValueError("Gemini returned no parseable result")
@@ -210,5 +237,5 @@ Drugs: {", ".join(f.drugs)}
 Facts: {f.detail}
 Label text: {f.excerpt or "(none)"}
 Source: {f.source}"""
-    resp = _get_client().models.generate_content(model=MODEL, contents=prompt)
+    _, resp = _generate(contents=prompt)
     return (resp.text or "").strip()
