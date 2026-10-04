@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from . import gemini, openfda, otc, reconcile, rxnorm, safety, tts, drugs
+from . import gemini, openfda, otc, translate, reconcile, rxnorm, safety, tts, drugs
 from .models import (ExplainRequest, ExplainResponse, Medication, OTCCheckRequest, OTCCheckResponse, Profile,
                      ReconcileResponse, ReportRequest, SafetyReport, ScanResult)
 
@@ -120,6 +120,22 @@ def check_otc(req: OTCCheckRequest):
         if not c.ingredients and not c.ingredient:
             _identify(c)  # typed names: find the ingredients first
     return otc.check(req.profile, req.cabinet, req.candidates)
+
+
+class TranslateRequest(BaseModel):
+    language: str
+    texts: list[str]
+
+
+@app.post("/api/translate")
+def translate_ui(req: TranslateRequest):
+    """App interface text -> the person's chosen language. Untranslatable strings come back in English."""
+    lang = req.language.strip()[:40]
+    texts = [t[:400] for t in req.texts[:150]]
+    try:
+        return {"texts": translate.translate_texts(lang, texts)}
+    except Exception:
+        return {"texts": texts}  # never break the app over a translation
 
 
 @app.post("/api/explain", response_model=ExplainResponse)

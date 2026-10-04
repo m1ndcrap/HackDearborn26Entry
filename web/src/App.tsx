@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import InstallBanner from "./InstallBanner";
+import { setUiLanguage } from "./i18n";
+import Onboarding from "./screens/Onboarding";
 import { clearReminders, scheduleReminders } from "./reminders";
 import { buildSchedule } from "./schedule";
 import { useAppState, type App as AppModel } from "./store";
@@ -56,6 +58,10 @@ function MainApp() {
   const [tab, setTab] = useState<Tab>("cabinet");
   const online = useOnline();
   useReminders(app);
+  // Translate the app's own text whenever the chosen language changes (English = no-op)
+  useEffect(() => setUiLanguage(app.state.uiLanguage), [app.state.uiLanguage]);
+
+  if (!app.state.onboarded) return <Onboarding app={app} />;
 
   return (
     <div className="shell">

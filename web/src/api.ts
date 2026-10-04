@@ -87,3 +87,15 @@ export async function ttsAudio(text: string): Promise<Blob> {
   if (!res.ok) throw new Error(`Voice request failed (${res.status})`);
   return res.blob();
 }
+
+/** App interface text -> the chosen language. Returns the input unchanged for anything not translated. */
+export async function translateTexts(language: string, texts: string[]): Promise<string[]> {
+  const r = await json<{ texts: string[] }>(
+    await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language, texts }),
+    }),
+  );
+  return r.texts;
+}
