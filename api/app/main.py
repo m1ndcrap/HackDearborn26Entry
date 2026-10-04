@@ -1,13 +1,16 @@
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from . import gemini, openfda, otc, rxnorm, safety, tts, drugs
-from .models import (ExplainRequest, ExplainResponse, Medication, OTCCheckRequest, OTCCheckResponse, ReportRequest,
-                     SafetyReport, ScanResult)
+from . import gemini, openfda, otc, reconcile, rxnorm, safety, tts, drugs
+from .models import (ExplainRequest, ExplainResponse, Medication, OTCCheckRequest, OTCCheckResponse, Profile,
+                     ReconcileResponse, ReportRequest, SafetyReport, ScanResult)
+
+GEMINI_BUSY = "Gemini is busy right now. Wait a few seconds and try again."
 
 app = FastAPI(title="Pocket Apothecary API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -20,7 +23,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "gemini_mock_mode": gemini.mock_mode(), "model": gemini.MODEL, "elevenlabs": tts.configured(), "openfda_key": bool(openfda.API_KEY)}
+    return {"ok": True, "gemini_mock_mode": gemini.mock_mode(), "model": gemini.MODEL, "fallback_model": gemini.FALLBACK_MODEL, "elevenlabs": tts.configured(), "openfda_key": bool(openfda.API_KEY)}
 
 
 def _identify(m: Medication) -> None:
@@ -47,13 +50,50 @@ async def scan(file: UploadFile = File(...)):
     if len(data) > 10 * 1024 * 1024:
         raise HTTPException(413, "Image too large (10 MB max)")
     try:
-        result = gemini.extract_medications(data, file.content_type or "image/jpeg")
+        # Blocking SDK call: run it on a worker thread so other requests aren't stuck behind it
+        result = await run_in_threadpool(gemini.extract_medications, data, file.content_type or "image/jpeg")
+    except gemini.GeminiBusy:
+        raise HTTPException(503, GEMINI_BUSY)
     except Exception as e:
         raise HTTPException(502, f"Couldn't read that image: {e}")
     for m in result.medications:
         m.id = uuid.uuid4().hex[:8]
         await run_in_threadpool(_identify, m)  # network lookups: keep them off the event loop
     return result
+
+
+def _identify_all(meds: list[Medication]) -> None:
+    with ThreadPoolExecutor(max_workers=min(6, len(meds) or 1)) as pool:
+        list(pool.map(_identify, meds))  # a discharge sheet has many lines; look them up in parallel
+
+
+@app.post("/api/reconcile", response_model=ReconcileResponse)
+async def reconcile_sheet(file: UploadFile = File(...), profile: str = Form(...), cabinet: str = Form("[]")):
+    """Discharge reconciliation: photo of a discharge sheet + the current cabinet -> new / changed / stopped /
+    duplicate / unchanged / not-on-sheet, plus a safety check on the after-discharge cabinet. Nothing is saved.
+    Multipart form: `file` (image), `profile` and `cabinet` (JSON strings)."""
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty upload")
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Image too large (10 MB max)")
+    try:
+        prof = Profile.model_validate_json(profile)
+        cab = TypeAdapter(list[Medication]).validate_json(cabinet)
+    except ValidationError as e:
+        raise HTTPException(422, f"Bad profile or cabinet: {e}")
+    try:
+        doc_type, sheet = await run_in_threadpool(gemini.extract_discharge, data, file.content_type or "image/jpeg")
+    except gemini.GeminiBusy:
+        raise HTTPException(503, GEMINI_BUSY)
+    except Exception as e:
+        raise HTTPException(502, f"Couldn't read that discharge sheet: {e}")
+    if not sheet:
+        raise HTTPException(422, "We couldn't find a medication list in that photo. Try again with the whole page in view.")
+    for m in sheet:
+        m.id = uuid.uuid4().hex[:8]
+    await run_in_threadpool(_identify_all, sheet)
+    return await run_in_threadpool(reconcile.reconcile, prof, cab, sheet, doc_type)
 
 
 @app.get("/api/normalize")
@@ -86,6 +126,8 @@ def check_otc(req: OTCCheckRequest):
 def explain(req: ExplainRequest):
     try:
         return ExplainResponse(text=gemini.explain_flag(req))
+    except gemini.GeminiBusy:
+        raise HTTPException(503, GEMINI_BUSY)
     except Exception as e:
         raise HTTPException(502, f"Couldn't generate an explanation: {e}")
 

@@ -29,6 +29,9 @@ LOCAL_BRANDS: dict[str, list[str]] = {
     "glucophage": ["metformin"], "lipitor": ["atorvastatin"], "zocor": ["simvastatin"],
     "amoxil": ["amoxicillin"], "plavix": ["clopidogrel"], "eliquis": ["apixaban"], "xarelto": ["rivaroxaban"],
     "prilosec": ["omeprazole"], "nexium": ["esomeprazole"], "lasix": ["furosemide"], "norvasc": ["amlodipine"],
+    # Product families RxNorm has no single entry for; these are the standard Cold & Flu formulas
+    "nyquil": ["acetaminophen", "dextromethorphan", "doxylamine"],
+    "dayquil": ["acetaminophen", "dextromethorphan", "phenylephrine"],
 }
 KNOWN_GENERICS = {g for gs in LOCAL_BRANDS.values() for g in gs} | {"iron", "ferrous sulfate", "magnesium", "doxycycline"}
 
@@ -38,7 +41,7 @@ _NOISE = re.compile(
     | \b\d+(?:\.\d+)?\b                                       # stray numbers
     | \b(?:tablets?|tabs?|capsules?|caps?|caplets?|softgels?|gelcaps?|liqui-?gels?|oral|solution|
          suspension|liquid|chewables?|film|coated|extended|delayed|release|er|xr|sr|dr|hcl|
-         hydrochloride|sodium|potassium|generic|brand|usp|rx|otc|strength|extra|maximum|regular)\b
+         hydrochloride|sodium|potassium|generic|brand|usp|rx|otc|strength|extra|maximum|regular|vicks)\b
     """,
     re.X | re.I,
 )
@@ -92,7 +95,7 @@ def normalize(name: str) -> dict:
         return out
 
     words = cleaned.split()
-    for key in (cleaned, words[0], "-".join(words[:2])):
+    for key in (cleaned, "-".join(words[:2])):
         if key in LOCAL_BRANDS:
             return {**out, "ingredients": LOCAL_BRANDS[key], "source": "local"}
     if cleaned in KNOWN_GENERICS:
@@ -104,4 +107,8 @@ def normalize(name: str) -> dict:
             return {**out, "ingredients": list(ings), "rxcui": rxcui, "source": "rxnorm"}
     except Exception:
         pass  # offline or RxNav down: fall through
+    # First word only as a last resort: "tylenol pm" is acetaminophen + diphenhydramine, which RxNorm knows
+    # but the plain "tylenol" entry doesn't, so this must not run before the lookup above.
+    if words[0] in LOCAL_BRANDS:
+        return {**out, "ingredients": LOCAL_BRANDS[words[0]], "source": "local"}
     return {**out, "ingredients": [cleaned], "source": "fallback"}

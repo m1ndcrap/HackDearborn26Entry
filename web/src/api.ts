@@ -1,4 +1,4 @@
-import type { Medication, OtcCheckResponse, Profile, SafetyFlag, SafetyReport, ScanResult } from "./types";
+import type { Medication, OtcCheckResponse, Profile, ReconcileResponse, SafetyFlag, SafetyReport, ScanResult } from "./types";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -38,6 +38,15 @@ export async function checkOtc(profile: Profile, cabinet: Medication[], candidat
       body: JSON.stringify({ profile, cabinet, candidates }),
     }),
   );
+}
+
+/** Discharge reconciliation: compare a discharge sheet photo with the cabinet. Nothing is saved. */
+export async function reconcileDischarge(file: File, profile: Profile, cabinet: Medication[]): Promise<ReconcileResponse> {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("profile", JSON.stringify(profile));
+  body.append("cabinet", JSON.stringify(cabinet));
+  return json(await fetch("/api/reconcile", { method: "POST", body }));
 }
 
 export async function explainFlag(profile: Profile, flag: SafetyFlag): Promise<string> {

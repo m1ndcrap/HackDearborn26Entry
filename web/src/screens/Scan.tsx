@@ -86,17 +86,21 @@ interface ScanProps {
   routine?: Routine;
   onAdd: (meds: Medication[], replaceIds: string[], photo: string | null) => void;
   onBuyCheck?: () => void;
+  startTyping?: boolean; // open straight on the type-it-in form (Cabinet's "Type it in" button)
+  onCancelTyping?: () => void; // where Cancel goes from that form; defaults to the scan screen
+  onUseDischarge?: () => void; // opens the discharge check, for a discharge sheet photographed here
 }
 
-export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps) {
+export default function Scan({ cabinet, routine, onAdd, onBuyCheck, startTyping = false, onCancelTyping, onUseDischarge }: ScanProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
   const [photo, setPhoto] = useState<string | null>(null); // thumbnail of the scanned label, shown in the Cabinet
+  const [docType, setDocType] = useState("");
   const [choices, setChoices] = useState<Record<string, DupAction>>({}); // scanned med id -> what to do with its cabinet match
   const online = useOnline();
   const [live, setLive] = useState(false);
-  const [typing, setTyping] = useState(false);
+  const [typing, setTyping] = useState(startTyping);
   const libraryRef = useRef<HTMLInputElement>(null);
   const nativeCameraRef = useRef<HTMLInputElement>(null);
 
@@ -110,6 +114,7 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
       // One photo of a whole discharge sheet doesn't identify any single medicine, so skip it there
       setPhoto(res.document_type === "discharge_sheet" ? null : thumb);
       setFound(res.medications);
+      setDocType(res.document_type);
       setChoices({});
       if (res.medications.length === 0) setError("We couldn't find a medicine in that photo. Try again in better light, closer to the label.");
     } catch (e) {
@@ -122,7 +127,7 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
   const useCamera = () => {
     if (canUseLiveCamera()) return setLive(true);
     if (window.matchMedia("(pointer: coarse)").matches) return nativeCameraRef.current?.click();
-    setError("The in-app camera needs https or localhost. Open http://localhost:5173 on this computer, or use your phone.");
+    setError("The in-app camera needs https or localhost. Choose a photo or type it in instead.");
   };
 
   const edit = (id: string, patch: Partial<Medication>) => setFound((f) => f && f.map((m) => (m.id === id ? { ...m, ...patch } : m)));
@@ -133,10 +138,11 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
     return (
       <ManualAdd
         routine={routine}
-        onCancel={() => setTyping(false)}
+        onCancel={() => (onCancelTyping ? onCancelTyping() : setTyping(false))}
         onSave={(med) => {
           setTyping(false);
           setPhoto(null);
+          setDocType(""); // typed in, not a photo
           if (findCabinetMatch(med, cabinet)) {
             setFound([med]);
             setChoices({});
@@ -162,6 +168,23 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
 
     return (
       <section>
+        {docType === "discharge_sheet" && (
+          // The bottle reader lists every line, including ones the hospital says to STOP
+          <div className="verdict avoid" role="alert">
+            <div className="verdict-label">This looks like a discharge sheet</div>
+            <p>
+              Some medicines on it may be ones the hospital stopped, but they'd be added here as if you should take them. Use the discharge check: it
+              compares the sheet with the cabinet and shows what's new, changed, and stopped.
+            </p>
+            {onUseDischarge && (
+              <div className="actions">
+                <button className="primary" onClick={onUseDischarge}>
+                  Use the discharge check
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <h2>Check what we read</h2>
         <p className="hint">Fix anything that looks wrong before adding. Highlighted rows were harder to read.</p>
         <div className="cards">
@@ -239,7 +262,7 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
   return (
     <section className="empty">
       <h2>Scan a label</h2>
-      <p>Take a clear photo of a pill bottle, an over-the-counter box, or a discharge sheet.</p>
+      <p>Take a clear photo of a pill bottle or an over-the-counter box.</p>
       <div className="choices">
         <button className="primary" onClick={useCamera} disabled={busy || !online}>
           {busy ? "Reading label…" : "Use camera"}
@@ -248,7 +271,7 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
           Choose from photo library
         </button>
         <button className="secondary" onClick={() => setTyping(true)} disabled={busy}>
-          Type it in instead
+          Type it in
         </button>
       </div>
       {onBuyCheck && (
@@ -258,6 +281,14 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps)
             Check before buying →
           </button>
         </div>
+      )}
+      {onUseDischarge && (
+        <p className="hint">
+          Home from the hospital?{" "}
+          <button className="link" onClick={onUseDischarge}>
+            Scan the discharge sheet here instead
+          </button>
+        </p>
       )}
       {!online && <p className="hint">Scanning needs a connection. Your cabinet still works offline.</p>}
       {/* Hidden inputs: the library picker has no capture attribute; the native-camera one is the fallback when live camera isn't available (e.g. http on a phone). */}

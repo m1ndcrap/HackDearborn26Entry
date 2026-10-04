@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { normalizeName, type Normalized } from "../api";
 import { DEFAULT_CHOICE, fromDirections, HOW_OFTEN_OPTIONS, toDirections, type FrequencyChoice } from "../frequency";
-import { buildSchedule, DEFAULT_ROUTINE, fmtTime, type Routine } from "../schedule";
+import { buildSchedule, DEFAULT_ROUTINE, fmtTime, parseDirections, type Routine } from "../schedule";
 import type { Medication } from "../types";
 import { useOnline } from "../useOnline";
 
@@ -29,8 +29,16 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
 
-  const set = (patch: Partial<FrequencyChoice>) => setChoice((c) => ({ ...c, ...patch }));
-  const directions = toDirections(choice);
+  // Editing keeps the label's own wording until a button is tapped: converting "every 4 to 6 hours as needed"
+  // to the buttons would drop the 4-6 hour limit, and an entry with no directions would get "once daily" invented.
+  const [touched, setTouched] = useState(!initial);
+  const knownOriginal = !initial || parseDirections(initial.frequency ?? "").kind !== "unknown";
+  const showChoice = touched || knownOriginal; // don't highlight a guessed button for directions we couldn't read
+  const set = (patch: Partial<FrequencyChoice>) => {
+    setTouched(true);
+    setChoice((c) => ({ ...c, ...patch }));
+  };
+  const directions = touched ? toDirections(choice) : initial?.frequency?.trim() ?? "";
 
   // Live preview of when this would be scheduled, using the person's own routine
   const preview = useMemo(() => {
@@ -73,7 +81,7 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
       name: n,
       strength: strength.trim() || null,
       dose: dose.trim() || null,
-      frequency: directions,
+      frequency: directions || null,
       ingredients: known.length ? known : keepOld ? initial?.ingredients : undefined,
       ingredient: known.length ? known.join(" / ") : keepOld ? (initial?.ingredient ?? null) : null,
       rxcui: known.length ? norm!.rxcui : keepOld ? (initial?.rxcui ?? null) : null,
@@ -132,14 +140,14 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
         <legend>How often?</legend>
         <div className="seg">
           {HOW_OFTEN_OPTIONS.map((o) => (
-            <button key={o.value} type="button" aria-pressed={choice.howOften === o.value} onClick={() => set({ howOften: o.value })}>
+            <button key={o.value} type="button" aria-pressed={showChoice && choice.howOften === o.value} onClick={() => set({ howOften: o.value })}>
               {o.label}
             </button>
           ))}
         </div>
       </fieldset>
 
-      {choice.howOften === "hours" && (
+      {showChoice && choice.howOften === "hours" && (
         <fieldset className="seg-group">
           <legend>Every how many hours?</legend>
           <div className="seg">
@@ -152,7 +160,7 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
         </fieldset>
       )}
 
-      {choice.howOften === "once" && (
+      {showChoice && choice.howOften === "once" && (
         <fieldset className="seg-group">
           <legend>What time of day?</legend>
           <div className="seg">
@@ -165,7 +173,7 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
         </fieldset>
       )}
 
-      {choice.howOften !== "prn" && (
+      {showChoice && choice.howOften !== "prn" && (
         <fieldset className="seg-group">
           <legend>Food</legend>
           <div className="seg">

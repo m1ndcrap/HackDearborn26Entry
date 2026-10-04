@@ -82,6 +82,16 @@ export function useAppState() {
         return { ...s, profiles: [...s.profiles, p], activeId: p.id, cabinet: { ...s.cabinet, [p.id]: [] } };
       }),
     updateProfile: (p: Profile) => setState((s) => ({ ...s, profiles: s.profiles.map((x) => (x.id === p.id ? p : x)) })),
+    // Deletes the person with their cabinet, routine, and label photos. The last profile can't be removed.
+    removeProfile: (id: string) =>
+      setState((s) => {
+        if (s.profiles.length <= 1) return s;
+        const profiles = s.profiles.filter((p) => p.id !== id);
+        const { [id]: removedMeds = [], ...cabinet } = s.cabinet;
+        const { [id]: _routine, ...routine } = s.routine;
+        const photos = without(s.photos, removedMeds.map((m) => m.id));
+        return { ...s, profiles, cabinet, routine, photos, activeId: s.activeId === id ? profiles[0].id : s.activeId };
+      }),
     // replaceIds: cabinet entries the new scan supersedes (a refill, or an old strength after a dose change)
     // photo: thumbnail of the label they were scanned from, if any
     addMeds: (added: Medication[], replaceIds: string[] = [], photo?: string | null) =>

@@ -88,6 +88,16 @@ Synthetic data only in demos. Not medical advice.
 - **Passport tab**: printable one-page summary with a QR code. The QR holds the data itself (nothing stored on a server). Set `VITE_PUBLIC_URL` to the deployed https URL at build time so QR codes open on other phones.
 - **ElevenLabs voice** (`api/app/tts.py`, `POST /api/tts`): set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in `api/.env`. Without them, Read aloud uses the browser voice.
 
+## Discharge reconciliation
+
+Cabinet > "Home from the hospital?" scans a discharge medication list and compares it with the cabinet (`POST /api/reconcile`, `api/app/reconcile.py`).
+
+- **Gemini** reads every line with its status: start, change, continue, stop (or unclear).
+- **Matching is by ingredient** (RxNorm), so "STOP ibuprofen" matches the Advil bottle and "sertraline" matches Zoloft.
+- **Buckets:** new, changed dose, stopped, hidden duplicate (e.g. new acetaminophen + NyQuil), unchanged, and not on the sheet (ask the doctor).
+- **Safety check** runs on the cabinet as it will be after the changes, and lists the problems in today's cabinet that go away (e.g. Advil + Coumadin bleeding risk).
+- Nothing changes until the family taps "Apply changes". Without a Gemini key, the endpoint returns the demo story (`_mock_discharge` in `gemini.py`).
+
 ## FDA label safety checks
 
 `api/app/openfda.py` fetches FDA drug labels; `api/app/safety.py` turns them into flags.

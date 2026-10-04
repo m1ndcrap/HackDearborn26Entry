@@ -8,10 +8,11 @@ import Passport, { SharedPassport } from "./screens/Passport";
 import ProfileScreen from "./screens/ProfileScreen";
 import Report from "./screens/Report";
 import BuyCheck from "./screens/BuyCheck";
+import Discharge from "./screens/Discharge";
 import Scan from "./screens/Scan";
 import Schedule from "./screens/Schedule";
 
-type Tab = "cabinet" | "scan" | "report" | "schedule" | "passport" | "profile" | "buy";
+type Tab = "cabinet" | "scan" | "report" | "schedule" | "passport" | "profile" | "buy" | "discharge" | "add";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "cabinet", label: "Cabinet" },
@@ -104,8 +105,34 @@ function MainApp() {
             routine={app.routine}
             onScan={() => setTab("scan")}
             onBuyCheck={() => setTab("buy")}
+            onDischarge={() => setTab("discharge")}
+            onAddByHand={() => setTab("add")}
             onRemove={app.removeMed}
             onUpdate={app.updateMed}
+          />
+        )}
+        {tab === "add" && (
+          // Same form and duplicate check as Scan > "Type it in", opened straight from the Cabinet
+          <Scan
+            cabinet={app.meds}
+            routine={app.routine}
+            startTyping
+            onCancelTyping={() => setTab("cabinet")}
+            onAdd={(meds, replaceIds) => {
+              app.addMeds(meds, replaceIds);
+              setTab("cabinet");
+            }}
+          />
+        )}
+        {tab === "discharge" && (
+          <Discharge
+            profile={app.profile}
+            cabinet={app.meds}
+            onApply={(added, removeIds) => {
+              app.addMeds(added, removeIds);
+              setTab("report");
+            }}
+            onUseScan={() => setTab("scan")}
           />
         )}
         {tab === "scan" && (
@@ -117,6 +144,7 @@ function MainApp() {
               app.addMeds(meds, replaceIds, photo);
               setTab("report");
             }}
+            onUseDischarge={() => setTab("discharge")}
           />
         )}
         {tab === "buy" && <BuyCheck profile={app.profile} cabinet={app.meds} onAdd={(med, photo) => app.addMeds([med], [], photo)} />}

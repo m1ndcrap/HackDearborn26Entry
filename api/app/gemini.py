@@ -4,20 +4,28 @@ import os
 import time
 from typing import Optional
 
+import httpx
 from dotenv import load_dotenv
-
 from pydantic import create_model
 
-from .models import ExplainRequest, Medication, ScanResult
+from .models import DischargeMed, ExplainRequest, Medication, ScanResult
 
 load_dotenv()
 log = logging.getLogger("uvicorn.error")
 
-# Pinned stable model ID (no -preview / -latest alias, so behavior can't shift on demo day)
+# Pinned stable model IDs (no -preview / -latest alias, so behavior can't shift on demo day).
+# The fallback runs on separate capacity and takes over when the main model is overloaded.
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
 API_KEY = os.getenv("GEMINI_API_KEY", "")
 
+RETRYABLE = {429, 500, 502, 503, 504}  # rate limit, "high demand", transient server errors
+
 _client = None
+
+
+class GeminiBusy(Exception):
+    """Every attempt hit overload or a network error; trying again in a moment usually works."""
 
 
 def mock_mode() -> bool:
@@ -31,6 +39,27 @@ def _get_client():
 
         _client = genai.Client(api_key=API_KEY)
     return _client
+
+
+def _generate(**kwargs):
+    """generate_content that survives demand spikes and network blips: main model, a short pause,
+    main model again, then the fallback model. Returns (model_used, response)."""
+    from google.genai import errors
+
+    last: Exception | None = None
+    attempts = [(MODEL, 0.0), (MODEL, 1.5)] + ([(FALLBACK_MODEL, 0.0)] if FALLBACK_MODEL and FALLBACK_MODEL != MODEL else [])
+    for model, pause in attempts:
+        time.sleep(pause)
+        try:
+            return model, _get_client().models.generate_content(model=model, **kwargs)
+        except errors.APIError as e:
+            if e.code not in RETRYABLE:
+                raise  # bad key, bad request, unknown model: retrying won't help
+            last = e
+        except (httpx.TransportError, OSError) as e:  # DNS and connection failures
+            last = e
+        log.warning("gemini %s failed, trying again: %s", model, str(last)[:200])
+    raise GeminiBusy(str(last))
 
 
 SCAN_PROMPT = """You are reading a photo of a medication label: a pharmacy pill bottle or an over-the-counter box.
@@ -98,8 +127,7 @@ def extract_medications(image: bytes, mime_type: str) -> ScanResult:
     from google.genai import types
 
     start = time.perf_counter()
-    resp = _get_client().models.generate_content(
-        model=MODEL,
+    model, resp = _generate(
         contents=[types.Part.from_bytes(data=image, mime_type=mime_type), SCAN_PROMPT],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -108,11 +136,82 @@ def extract_medications(image: bytes, mime_type: str) -> ScanResult:
         ),
     )
     # One line per scan, so extraction can be checked with `docker compose logs -f api`
-    log.info("scan model=%s bytes=%d %.1fs -> %s", MODEL, len(image), time.perf_counter() - start, resp.text)
+    log.info("scan model=%s bytes=%d %.1fs -> %s", model, len(image), time.perf_counter() - start, resp.text)
     parsed = resp.parsed
     if parsed is None:
         raise ValueError("Gemini returned no parseable result")
     return ScanResult.model_validate(parsed.model_dump())
+
+
+DISCHARGE_PROMPT = """You are reading a hospital discharge medication list or after-visit summary.
+Return one entry for EVERY medication listed, including ones the patient is told to stop.
+
+For each medication:
+- `status`, from the section heading or wording next to it:
+  - "start": new medication ("NEW", "START taking", "begin")
+  - "change": dose or timing changed ("CHANGED", "take the NEW way", "increase", "decrease")
+  - "continue": keep taking as before ("CONTINUE", "no change", "keep taking", "resume")
+  - "stop": "STOP taking", "discontinue", "do not take", "hold"
+  - "unclear": listed with no instruction about whether to take it
+- `name`: the drug name as printed, without strength. If brands follow in parentheses, use the first name:
+  "Ibuprofen (Advil, Motrin)" -> "Ibuprofen".
+- `ingredient`: generic active ingredient in lowercase without salt words (sodium, HCl, succinate, ER), e.g. "metoprolol".
+- `strength`, `dose`, `frequency`: as printed. For "change", use the NEW values.
+- `previous`: the old dose if printed (e.g. "was 2.5 mg" -> "2.5 mg"), else null.
+- `instructions`: other directions (with food, until finished, check INR), or null.
+- `confidence` 0-1: below 0.7 if blurry, handwritten, cut off, or the status had to be guessed.
+
+Rules:
+- Copy values as printed. Never invent a dose. Use null when not visible.
+- Ignore patient details, dates, appointments, lab values, diet and activity instructions.
+- If this is not a medication list, return an empty `medications` list and document_type "unknown".
+- `document_type`: discharge_sheet, pill_bottle, otc_box or unknown."""
+
+_DISCHARGE_FIELDS = ["name", "ingredient", "strength", "dose", "frequency", "instructions", "confidence", "status", "previous"]
+_SheetMed = create_model("SheetMed", **{k: (DischargeMed.model_fields[k].annotation, DischargeMed.model_fields[k]) for k in _DISCHARGE_FIELDS})
+_SheetRead = create_model(
+    "SheetRead",
+    document_type=(ScanResult.model_fields["document_type"].annotation, "unknown"),
+    medications=(list[_SheetMed], ...),  # type: ignore[valid-type]
+)
+
+
+def _mock_discharge() -> tuple[str, list[DischargeMed]]:
+    """The demo story: grandpa home after a heart scare (see README)."""
+    rows = [
+        ("start", "Lisinopril", "lisinopril", "10 mg", "1 tablet", "once daily", None),
+        ("start", "Acetaminophen", "acetaminophen", "650 mg", "1 tablet", "every 6 hours as needed for pain", None),
+        ("change", "Warfarin", "warfarin", "5 mg", "1 tablet", "once daily in the evening", "2.5 mg"),
+        ("continue", "Sertraline", "sertraline", "50 mg", "1 tablet", "every morning", None),
+        ("stop", "Ibuprofen", "ibuprofen", None, None, None, None),
+    ]
+    return "discharge_sheet", [
+        DischargeMed(status=s, name=n, ingredient=i, strength=st, dose=d, frequency=f, previous=p, confidence=0.9)
+        for s, n, i, st, d, f, p in rows
+    ]
+
+
+def extract_discharge(image: bytes, mime_type: str) -> tuple[str, list[DischargeMed]]:
+    """Every medication on a discharge sheet with its start/change/continue/stop status."""
+    if mock_mode():
+        return _mock_discharge()
+
+    from google.genai import types
+
+    start = time.perf_counter()
+    model, resp = _generate(
+        contents=[types.Part.from_bytes(data=image, mime_type=mime_type), DISCHARGE_PROMPT],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=_SheetRead,
+            media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+        ),
+    )
+    log.info("discharge model=%s bytes=%d %.1fs -> %s", model, len(image), time.perf_counter() - start, resp.text)
+    parsed = resp.parsed
+    if parsed is None:
+        raise ValueError("Gemini returned no parseable result")
+    return parsed.document_type, [DischargeMed.model_validate(m.model_dump()) for m in parsed.medications]
 
 
 LEVELS = {
@@ -138,5 +237,5 @@ Drugs: {", ".join(f.drugs)}
 Facts: {f.detail}
 Label text: {f.excerpt or "(none)"}
 Source: {f.source}"""
-    resp = _get_client().models.generate_content(model=MODEL, contents=prompt)
+    _, resp = _generate(contents=prompt)
     return (resp.text or "").strip()
