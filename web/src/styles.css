@@ -407,3 +407,7 @@ html[data-text-size="xl"] { font-size: 24px; }
 .about-note li { margin-bottom: 6px; font-size: 0.92rem; }
 .about-warning { background: var(--amber-bg); color: var(--amber-ink); border-radius: 16px; padding: 10px 14px; font-size: 0.9rem; }
 @media (min-width: 900px) { .about-note { max-width: 760px; } }
+/* Hotfix: keep the phone tab bar above scrolling content. The nav comes before <main> in the page,
+   so positioned cards (.med-card, timeline dots) were painting on top of it. */
+.tabs { z-index: 20; }
+.top { position: relative; z-index: 21; }
