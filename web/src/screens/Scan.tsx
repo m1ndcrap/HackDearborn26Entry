@@ -84,9 +84,10 @@ interface ScanProps {
   cabinet: Medication[];
   routine?: Routine;
   onAdd: (meds: Medication[], replaceIds: string[]) => void;
+  onBuyCheck?: () => void;
 }
 
-export default function Scan({ cabinet, routine, onAdd }: ScanProps) {
+export default function Scan({ cabinet, routine, onAdd, onBuyCheck }: ScanProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
@@ -244,6 +245,14 @@ export default function Scan({ cabinet, routine, onAdd }: ScanProps) {
           Type it in instead
         </button>
       </div>
+      {onBuyCheck && (
+        <div className="buy-entry">
+          <p>At the store?</p>
+          <button className="ghost" onClick={onBuyCheck} disabled={busy}>
+            Check before buying →
+          </button>
+        </div>
+      )}
       {!online && <p className="hint">Scanning needs a connection. Your cabinet still works offline.</p>}
       {/* Hidden inputs: the library picker has no capture attribute; the native-camera one is the fallback when live camera isn't available (e.g. http on a phone). */}
       <input ref={libraryRef} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />

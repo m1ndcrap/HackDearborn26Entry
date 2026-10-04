@@ -206,3 +206,15 @@ button.off, .choices button:disabled { cursor: not-allowed; }
 .seg button { flex: 1 1 auto; min-width: 46%; min-height: 52px; background: var(--paper); border: 1.5px solid var(--line); color: var(--ink); font-weight: 600; }
 .seg button[aria-pressed="true"] { background: var(--cobalt); border-color: var(--cobalt); color: #fff; }
 .preview { background: #e8edf8; border-radius: 10px; padding: 10px 14px 2px; margin: 4px 0 8px; }
+
+/* Editable cabinet entries */
+.meds li { padding: 0 6px 0 0; }
+.med-main { flex: 1; min-width: 0; display: block; text-align: left; background: none; border: 0; padding: 12px 14px; font-weight: 400; border-radius: 10px; }
+.med-main:hover { background: var(--chalk); }
+.tag.date-red { background: var(--red-bg); color: var(--red); border-color: transparent; }
+.tag.date-amber { background: var(--amber-bg); color: var(--amber-ink); border-color: transparent; }
+.more { margin: 4px 0 14px; }
+.more summary { cursor: pointer; font-weight: 600; color: var(--cobalt); min-height: 36px; }
+.more .row { margin-top: 8px; }
+.buy-entry { margin-top: 26px; padding-top: 16px; border-top: 1.5px solid var(--line); }
+.buy-entry p { margin: 0 0 4px; color: var(--muted); }

@@ -23,6 +23,8 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
   const [strength, setStrength] = useState(initial?.strength ?? "");
   const [dose, setDose] = useState(initial?.dose ?? "1 tablet");
   const [choice, setChoice] = useState<FrequencyChoice>(() => (initial ? fromDirections(initial.frequency) : DEFAULT_CHOICE));
+  const [refill, setRefill] = useState(initial?.refill_date ?? "");
+  const [expires, setExpires] = useState(initial?.expires_on ?? "");
   const [match, setMatch] = useState<Normalized | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
@@ -60,8 +62,11 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
       return;
     }
     setError("");
-    const norm = match && match.input === n ? match : await lookUp(n);
+    const sameName = !!initial && initial.name.trim().toLowerCase() === n.toLowerCase();
+    // Editing without renaming: keep what we already know instead of looking it up again
+    const norm = sameName && initial?.ingredient ? null : match && match.input === n ? match : await lookUp(n);
     const known = norm && norm.source !== "fallback" && norm.source !== "none" ? norm.ingredients : [];
+    const keepOld = sameName && !known.length; // renamed to something unknown: drop the old ingredients
     onSave({
       ...(initial ?? { warnings: [] }),
       id: initial?.id || Math.random().toString(36).slice(2, 10),
@@ -69,10 +74,12 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
       strength: strength.trim() || null,
       dose: dose.trim() || null,
       frequency: directions,
-      ingredients: known.length ? known : initial?.ingredients,
-      ingredient: known.length ? known.join(" / ") : initial?.ingredient ?? null,
-      rxcui: norm?.rxcui ?? initial?.rxcui ?? null,
-      verified_by: known.length ? (norm!.source === "rxnorm" ? "RxNorm" : "Pocket Apothecary") : initial?.verified_by ?? null,
+      ingredients: known.length ? known : keepOld ? initial?.ingredients : undefined,
+      ingredient: known.length ? known.join(" / ") : keepOld ? (initial?.ingredient ?? null) : null,
+      rxcui: known.length ? norm!.rxcui : keepOld ? (initial?.rxcui ?? null) : null,
+      verified_by: known.length ? (norm!.source === "rxnorm" ? "RxNorm" : "Pocket Apothecary") : keepOld ? (initial?.verified_by ?? null) : null,
+      refill_date: refill || null,
+      expires_on: expires || null,
       warnings: initial?.warnings ?? [],
       confidence: 1,
     });
@@ -176,6 +183,20 @@ export default function ManualAdd({ initial, routine = DEFAULT_ROUTINE, submitLa
           </div>
         </fieldset>
       )}
+
+      <details className="more" open={!!(initial?.refill_date || initial?.expires_on)}>
+        <summary>Refill and expiry dates (optional)</summary>
+        <div className="row">
+          <label>
+            Refill by
+            <input type="date" value={refill} onChange={(e) => setRefill(e.target.value)} />
+          </label>
+          <label>
+            Expires
+            <input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
+          </label>
+        </div>
+      </details>
 
       <div className="preview">
         <p>
