@@ -87,6 +87,7 @@ function MainApp() {
         {tab === "scan" && (
           <Scan
             cabinet={app.meds}
+            routine={app.routine}
             onAdd={(meds, replaceIds) => {
               app.addMeds(meds, replaceIds);
               setTab("report");

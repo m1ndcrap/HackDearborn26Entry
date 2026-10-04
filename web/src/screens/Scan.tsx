@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { scanImage } from "../api";
 import { DEFAULT_ACTION, describeMatch, findCabinetMatch, type DupAction } from "../duplicates";
 import type { Medication } from "../types";
+import ManualAdd from "./ManualAdd";
+import type { Routine } from "../schedule";
 import { useOnline } from "../useOnline";
 
 const LOW = 0.7;
@@ -80,16 +82,18 @@ export function CameraView({ onShot, onCancel }: { onShot: (f: File) => void; on
 
 interface ScanProps {
   cabinet: Medication[];
+  routine?: Routine;
   onAdd: (meds: Medication[], replaceIds: string[]) => void;
 }
 
-export default function Scan({ cabinet, onAdd }: ScanProps) {
+export default function Scan({ cabinet, routine, onAdd }: ScanProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
   const [choices, setChoices] = useState<Record<string, DupAction>>({}); // scanned med id -> what to do with its cabinet match
   const online = useOnline();
   const [live, setLive] = useState(false);
+  const [typing, setTyping] = useState(false);
   const libraryRef = useRef<HTMLInputElement>(null);
   const nativeCameraRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +123,23 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
   const edit = (id: string, patch: Partial<Medication>) => setFound((f) => f && f.map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
   if (live) return <CameraView onShot={pick} onCancel={() => setLive(false)} />;
+
+  if (typing) {
+    return (
+      <ManualAdd
+        routine={routine}
+        onCancel={() => setTyping(false)}
+        onSave={(med) => {
+          setTyping(false);
+          if (findCabinetMatch(med, cabinet)) {
+            // Same duplicate handling as scans: show the confirm screen with the choices
+            setFound([med]);
+            setChoices({});
+          } else onAdd([med], []);
+        }}
+      />
+    );
+  }
 
   if (found && found.length > 0) {
     // Recomputed every render so it follows edits to the name or strength
@@ -218,6 +239,9 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
         </button>
         <button className="secondary" onClick={() => libraryRef.current?.click()} disabled={busy || !online}>
           Choose from photo library
+        </button>
+        <button className="secondary" onClick={() => setTyping(true)} disabled={busy}>
+          Type it in instead
         </button>
       </div>
       {!online && <p className="hint">Scanning needs a connection. Your cabinet still works offline.</p>}
