@@ -1,4 +1,4 @@
-import type { Medication, Profile, SafetyFlag, SafetyReport, ScanResult } from "./types";
+import type { Medication, OtcCheckResponse, Profile, SafetyFlag, SafetyReport, ScanResult } from "./types";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -25,6 +25,17 @@ export async function getReport(profile: Profile, medications: Medication[]): Pr
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile, medications }),
+    }),
+  );
+}
+
+/** Pre-purchase check: is each candidate OK with the cabinet? Nothing is saved. */
+export async function checkOtc(profile: Profile, cabinet: Medication[], candidates: Medication[]): Promise<OtcCheckResponse> {
+  return json(
+    await fetch("/api/check-otc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile, cabinet, candidates }),
     }),
   );
 }

@@ -47,6 +47,20 @@ export interface SafetyFlag {
   source_url?: string | null; // DailyMed page for that label
 }
 
+export type OtcVerdict = "ok" | "ask" | "avoid" | "unknown";
+
+export interface OtcResult {
+  medication: Medication; // the candidate, with ingredients filled in by the server
+  verdict: OtcVerdict;
+  summary: string;
+  flags: SafetyFlag[]; // only flags involving this candidate
+}
+
+export interface OtcCheckResponse {
+  results: OtcResult[];
+  checked_against: number;
+}
+
 export interface SafetyReport {
   flags: SafetyFlag[];
   checked: number;

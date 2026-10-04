@@ -7,7 +7,7 @@ import { useOnline } from "../useOnline";
 
 const LABEL = { high: "Talk to a pharmacist", caution: "Use caution", info: "Good to know" } as const;
 
-function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
+export function Flag({ flag, profile }: { flag: SafetyFlag; profile: Profile }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");

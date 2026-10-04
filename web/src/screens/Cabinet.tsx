@@ -4,18 +4,24 @@ interface Props {
   meds: Medication[];
   profile: Profile;
   onScan: () => void;
+  onBuyCheck: () => void;
   onRemove: (id: string) => void;
 }
 
-export default function Cabinet({ meds, profile, onScan, onRemove }: Props) {
+export default function Cabinet({ meds, profile, onScan, onBuyCheck, onRemove }: Props) {
   if (meds.length === 0) {
     return (
       <section className="empty">
         <h2>{profile.name}'s cabinet is empty</h2>
         <p>Scan a pill bottle, an over-the-counter box, or a discharge sheet to add medicines.</p>
-        <button className="primary" onClick={onScan}>
-          Scan a label
-        </button>
+        <div className="choices">
+          <button className="primary" onClick={onScan}>
+            Scan a label
+          </button>
+          <button className="secondary" onClick={onBuyCheck}>
+            Check before buying
+          </button>
+        </div>
       </section>
     );
   }
@@ -35,9 +41,14 @@ export default function Cabinet({ meds, profile, onScan, onRemove }: Props) {
           </li>
         ))}
       </ul>
-      <button className="primary" onClick={onScan}>
-        Scan another
-      </button>
+      <div className="actions">
+        <button className="primary" onClick={onScan}>
+          Scan another
+        </button>
+        <button className="secondary" onClick={onBuyCheck}>
+          Check before buying
+        </button>
+      </div>
     </section>
   );
 }

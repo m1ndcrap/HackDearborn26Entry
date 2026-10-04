@@ -160,7 +160,7 @@ def ingredients_of(med: Medication) -> list[str]:
     if med.ingredients:
         return [i.lower().strip() for i in med.ingredients if i.strip()]
     if med.ingredient:
-        return [med.ingredient.lower().strip()]
+        return [i.strip() for i in med.ingredient.lower().split(" / ") if i.strip()]  # "a / b" for combination products
     key = med.name.lower().strip().split()[0] if med.name.strip() else ""
     return [BRAND_FALLBACK.get(key, key)] if key else []
 
