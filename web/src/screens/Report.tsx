@@ -145,7 +145,13 @@ export default function Report({ profile, meds, onScan }: { profile: Profile; me
           {report.unchecked.length === 1 ? "it" : "them"}. Ask your pharmacist about {report.unchecked.length === 1 ? "this one" : "these"}.
         </p>
       )}
-      {report?.flags.map((f) => <Flag key={f.id} flag={f} profile={profile} />)}
+      {report && report.flags.length > 0 && (
+        <div className="flags">
+          {report.flags.map((f) => (
+            <Flag key={f.id} flag={f} profile={profile} />
+          ))}
+        </div>
+      )}
       <p className="disclaimer">Pocket Apothecary doesn't give medical advice. Confirm anything important with your pharmacist or doctor.</p>
     </section>
   );

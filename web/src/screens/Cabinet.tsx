@@ -5,6 +5,7 @@ import ManualAdd from "./ManualAdd";
 
 interface Props {
   meds: Medication[];
+  photos: Record<string, string>; // med id -> label thumbnail
   profile: Profile;
   routine?: Routine;
   onScan: () => void;
@@ -12,6 +13,19 @@ interface Props {
   onRemove: (id: string) => void;
   onUpdate: (med: Medication) => void;
 }
+
+// Shown when a medicine has no label photo (typed in, discharge sheet, or added before photos existed)
+function PillBottleIcon() {
+  return (
+    <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" aria-hidden="true">
+      <rect x="13" y="6" width="22" height="7" rx="2" />
+      <path d="M15 13h18v26a3 3 0 0 1-3 3H18a3 3 0 0 1-3-3z" />
+      <path d="M15 21h18v12H15" />
+    </svg>
+  );
+}
+
+const orNot = (v: string | null | undefined, empty: string) => (v && v.trim()) || empty;
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 function daysUntil(iso?: string | null): number | null {
@@ -39,7 +53,7 @@ function badges(m: Medication) {
   return out;
 }
 
-export default function Cabinet({ meds, profile, routine, onScan, onBuyCheck, onRemove, onUpdate }: Props) {
+export default function Cabinet({ meds, photos, profile, routine, onScan, onBuyCheck, onRemove, onUpdate }: Props) {
   const [editing, setEditing] = useState<Medication | null>(null);
 
   if (editing) {
@@ -75,37 +89,56 @@ export default function Cabinet({ meds, profile, routine, onScan, onBuyCheck, on
   }
   return (
     <section>
-      <h2>{profile.name}'s medicines</h2>
+      <h2>{profile.name}'s cabinet</h2>
       <p className="hint">Tap a medicine to change its dose, how often, or refill and expiry dates.</p>
-      <ul className="meds">
-        {meds.map((m) => (
-          <li key={m.id}>
-            <button className="med-main" onClick={() => setEditing(m)} aria-label={`Edit ${m.name}`}>
-              <strong>{m.name}</strong> {m.strength}
-              <div className="sub">{[m.dose, m.frequency].filter(Boolean).join(" · ") || "No directions yet. Tap to add them."}</div>
-              {badges(m).length > 0 && (
-                <div className="tags">
-                  {badges(m).map((b) => (
-                    <span key={b.text} className={`tag date-${b.tone}`}>
-                      {b.text}
+      <div className="cabinet-box">
+        <ul className="meds">
+          {meds.map((m) => {
+            const b = badges(m);
+            return (
+              <li key={m.id}>
+                <h3 className="med-name">{m.name}</h3>
+                <div className="med-card">
+                  {/* The whole card (photo + facts) is one button that opens the edit form */}
+                  <button className="med-edit" onClick={() => setEditing(m)} aria-label={`Edit ${m.name}`}>
+                    <span className="med-photo">{photos[m.id] ? <img src={photos[m.id]} alt="" /> : <PillBottleIcon />}</span>
+                    <span className="med-facts">
+                      <span className="fact">
+                        Dosage: <span className="fact-val">{orNot([m.strength, m.dose].filter(Boolean).join(" · "), "Not listed")}</span>
+                      </span>
+                      <span className="fact">
+                        Frequency: <span className="fact-val">{orNot(m.frequency, "Not listed")}</span>
+                      </span>
+                      <span className="fact">
+                        Instructions: <span className="fact-val">{orNot(m.instructions, "None")}</span>
+                      </span>
+                      {b.length > 0 && (
+                        <span className="tags med-badges">
+                          {b.map((x) => (
+                            <span key={x.text} className={`tag date-${x.tone}`}>
+                              {x.text}
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </span>
-                  ))}
+                  </button>
+                  <button
+                    className="med-remove"
+                    onClick={() => {
+                      if (confirm(`Remove ${m.name} from ${profile.name}'s cabinet?`)) onRemove(m.id);
+                    }}
+                    aria-label={`Remove ${m.name}`}
+                  >
+                    ×
+                  </button>
                 </div>
-              )}
-            </button>
-            <button
-              className="ghost"
-              onClick={() => {
-                if (confirm(`Remove ${m.name} from ${profile.name}'s cabinet?`)) onRemove(m.id);
-              }}
-              aria-label={`Remove ${m.name}`}
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="actions">
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div className="actions center">
         <button className="primary" onClick={onScan}>
           Add another
         </button>

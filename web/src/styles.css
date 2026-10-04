@@ -1,10 +1,18 @@
+/* Look follows the Figma mockup: slate header, tab bar and form cards on a warm cream page,
+   light-gray pill inputs, Judson serif throughout. Safety colors (red/amber/green) are kept
+   so warnings still read as warnings. */
 :root {
-  --chalk: #f6f7f9;
-  --paper: #ffffff;
-  --ink: #16213a;
-  --muted: #566074;
-  --line: #d6dbe5;
-  --cobalt: #274690;
+  --slate: #3a3f49;
+  --slate-2: #4a505c; /* hover on slate */
+  --cream: #eeecea;
+  --pill: #d9d9d9;
+  --paper: #f8f7f5;
+  --brown: #86756a;
+  --sage: #688662;
+  --sage-light: #a3c19b; /* sage that stays visible on slate */
+  --muted: #5d626c;
+  --muted-on-dark: #c9c7c3;
+  --line: #d6d3ce;
   --amber: #f2b134;
   --amber-bg: #fff4db;
   --amber-ink: #6b4300;
@@ -12,17 +20,19 @@
   --red-bg: #fdecea;
   --green: #2f7d5b;
   --green-bg: #e6f4ec;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: "Judson", Georgia, "Times New Roman", serif;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M0 0h14L7 9z' fill='%233a3f49'/%3E%3C/svg%3E");
+  --caret-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M0 0h14L7 9z' fill='%23eeecea'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
 html { font-size: 18px; }
 body {
   margin: 0;
-  background: var(--chalk);
-  color: var(--ink);
-  font-family: var(--sans);
+  background: var(--cream);
+  color: var(--slate);
+  font-family: var(--serif);
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
 }
@@ -31,190 +41,278 @@ body {
 
 .shell { max-width: 640px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
 
+/* Header: wordmark left, avatar + person picker right */
 .top {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 14px;
-  background: var(--cobalt); color: #fff;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 12px;
+  background: var(--slate); color: var(--cream);
 }
-.top h1 { margin: 0; font-family: var(--serif); font-size: 1.3rem; font-weight: 600; letter-spacing: 0.01em; }
-.who select { background: #fff; color: var(--ink); border: 0; min-height: 40px; max-width: 150px; }
+.top h1 { margin: 0; line-height: 0; }
+.wordmark { display: block; height: 46px; width: auto; }
+.who-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.avatar-btn {
+  width: 48px; height: 48px; min-height: 0; padding: 0; border-radius: 50%;
+  background: transparent; color: var(--cream); border: 1.5px solid var(--cream);
+}
+.avatar-btn svg { width: 28px; height: 28px; }
+.avatar-btn[aria-current="page"] { background: var(--cream); color: var(--slate); }
+.top .who { margin: 0; }
+.top .who select {
+  width: auto; max-width: 140px; min-height: 28px; padding: 0 20px 0 2px; margin: 0;
+  background: var(--caret-light) no-repeat right 2px center / 12px 8px; border-radius: 6px;
+  color: var(--cream); font-family: var(--ui); font-size: 0.8rem; font-weight: 500;
+  text-overflow: ellipsis;
+}
+.top .who option { color: var(--slate); }
 
 main { flex: 1; padding: 20px 18px calc(90px + env(safe-area-inset-bottom, 0px)); }
-h2 { font-family: var(--serif); font-size: 1.45rem; line-height: 1.2; margin: 6px 0 14px; }
+h2 { font-family: var(--serif); font-size: 1.6rem; font-weight: 400; line-height: 1.2; margin: 6px 0 14px; }
 h3 { font-family: var(--serif); font-size: 1.15rem; margin: 6px 0 2px; }
 p { margin: 0 0 12px; }
 .hint, .sub, .src { color: var(--muted); font-size: 0.85rem; }
 
+/* Inputs are light-gray pills (radio buttons keep their native look) */
 button, input, select { font: inherit; color: inherit; }
-input, select {
-  width: 100%; min-height: 48px; padding: 8px 12px;
-  border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper);
+input:not([type="radio"]):not([type="checkbox"]), select {
+  width: 100%; min-height: 48px; padding: 8px 18px;
+  border: 0; border-radius: 999px; background: var(--pill); color: var(--slate);
 }
-label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
-label input, label select { margin-top: 4px; color: var(--ink); font-size: 1rem; }
+select { appearance: none; -webkit-appearance: none; padding-right: 44px; background: var(--pill) var(--caret) no-repeat right 18px center / 14px 9px; }
+label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 14px; }
+label input:not([type="radio"]), label select { margin-top: 6px; font-size: 1rem; }
 .row { display: flex; gap: 12px; }
 .row > * { flex: 1; min-width: 0; }
 
+/* Buttons are pills too */
 button, .filebtn {
-  min-height: 48px; padding: 10px 20px; border-radius: 8px; border: 1.5px solid transparent;
-  font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 10px 24px; border-radius: 999px; border: 1.5px solid transparent;
+  font-weight: 400; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
 }
-.primary { background: var(--cobalt); color: #fff; }
-.secondary { background: var(--paper); border-color: var(--cobalt); color: var(--cobalt); }
-.ghost { background: transparent; color: var(--cobalt); }
+.primary { background: var(--slate); color: var(--cream); }
+.secondary { background: var(--pill); color: var(--slate); }
+.ghost { background: transparent; color: var(--slate); text-decoration: underline; text-underline-offset: 3px; }
 button:disabled, .busy { opacity: 0.6; cursor: progress; }
 .filebtn { position: relative; overflow: hidden; }
 .filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; min-height: 0; }
-:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--sage); outline-offset: 2px; }
 
 .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .empty { text-align: center; padding: 48px 8px; }
 .empty p { color: var(--muted); }
 
-.card { background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 14px 14px 4px; margin-bottom: 14px; }
-.card.shaky { border-color: var(--amber); background: var(--amber-bg); }
-/* Already-in-cabinet notice on the scan confirm screen */
-.dup { border: 1.5px solid var(--line); border-left: 8px solid var(--cobalt); border-radius: 8px; padding: 8px 12px 4px; margin: 0 0 12px; background: var(--chalk); }
-.dup.strength { border-left-color: var(--amber); background: var(--amber-bg); }
-.dup.overlap { border-left-color: var(--red); background: var(--red-bg); }
-.dup legend { float: left; width: 100%; padding: 0; margin-bottom: 6px; font-weight: 700; color: var(--ink); font-size: 0.95rem; }
-.dup .opt { clear: both; display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: 0.95rem; margin-bottom: 4px; min-height: 40px; }
-.dup .opt input { width: 22px; min-height: 22px; margin: 0; flex: none; }
-.badge { display: inline-block; background: var(--amber); color: var(--amber-ink); font-weight: 700; font-size: 0.8rem; padding: 2px 10px; border-radius: 4px; margin-bottom: 8px; }
+/* Dark form cards, as in the mockup */
+.card, .routine, .cabinet-box { background: var(--slate); color: var(--cream); border: 0; }
+.card { border-radius: 32px; padding: 22px 24px 8px; margin-bottom: 14px; }
+.card label, .routine label, .routine summary { color: var(--cream); }
+.card .hint, .card .sub, .routine .hint { color: var(--muted-on-dark); }
+.card .primary, .routine .primary { background: var(--pill); color: var(--slate); }
+.card .ghost { color: var(--cream); }
+.card :focus-visible, .routine :focus-visible, .cabinet-box :focus-visible { outline-color: var(--sage-light); }
+.card.row { align-items: center; padding-bottom: 22px; }
+.card.row > input { margin: 0; }
+.card.shaky { box-shadow: inset 10px 0 0 var(--amber); padding-left: 32px; }
+/* Already-in-cabinet notice on the scan confirm screen: a light callout inside the dark card */
+.dup { border: 0; box-shadow: inset 8px 0 0 var(--slate); border-radius: 18px; padding: 10px 14px 6px 22px; margin: 0 0 14px; background: var(--paper); color: var(--slate); }
+.dup.strength { box-shadow: inset 8px 0 0 var(--amber); background: var(--amber-bg); }
+.dup.overlap { box-shadow: inset 8px 0 0 var(--red); background: var(--red-bg); }
+.dup :focus-visible { outline-color: var(--sage); }
+.dup legend { float: left; width: 100%; padding: 0; margin-bottom: 6px; font-weight: 700; color: var(--slate); font-size: 0.95rem; }
+.dup .opt { clear: both; display: flex; align-items: center; gap: 10px; color: var(--slate); font-size: 0.95rem; margin-bottom: 4px; min-height: 40px; }
+.dup .opt input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--slate); }
+.badge { display: inline-block; background: var(--amber); color: var(--amber-ink); font-weight: 700; font-size: 0.8rem; padding: 2px 12px; border-radius: 999px; margin-bottom: 8px; }
 
-.meds { list-style: none; margin: 0 0 18px; padding: 0; }
-.meds li { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+.actions.center { justify-content: center; }
 
-/* Safety flags are styled like pharmacy auxiliary warning labels: the one memorable element. */
-.flag { background: var(--paper); border: 1.5px solid var(--line); border-left-width: 10px; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
-.flag .stripe { display: inline-block; font-weight: 800; font-size: 0.85rem; padding: 3px 10px; border-radius: 3px; margin-bottom: 4px; }
-.flag.high { border-left-color: var(--red); }
+/* Cabinet: one dark box; each medicine is its name over a light card with the label photo */
+.cabinet-box { border-radius: 32px; padding: 20px 18px 4px; margin-bottom: 18px; }
+.meds { list-style: none; margin: 0; padding: 0; }
+.med-name { color: var(--cream); font-size: 1.05rem; font-weight: 400; margin: 0 0 8px 6px; }
+.med-card { position: relative; display: flex; gap: 14px; align-items: center; background: var(--paper); color: var(--slate); border-radius: 28px; padding: 12px 44px 12px 12px; margin-bottom: 18px; }
+.med-card :focus-visible { outline-color: var(--sage); }
+.med-photo { flex: none; width: 88px; height: 88px; border-radius: 50%; overflow: hidden; background: #fff; color: var(--slate); display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--line); }
+.med-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.med-photo svg { width: 44px; height: 44px; }
+.med-facts { margin: 0; min-width: 0; font-size: 0.95rem; line-height: 1.4; }
+.med-facts > div + div { margin-top: 6px; }
+.med-facts dt { display: inline; }
+.med-facts dd { display: inline; margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.med-remove { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%; background: transparent; color: var(--slate); font-size: 1.4rem; line-height: 1; }
+.med-remove:hover { background: var(--pill); }
+
+/* Safety flags are styled like pharmacy auxiliary warning labels: the one memorable element.
+   They stay on light cards because they hold long FDA text and must print well. */
+.flag { background: var(--paper); border: 0; box-shadow: inset 10px 0 0 var(--line); border-radius: 24px; padding: 14px 18px 12px 28px; margin-bottom: 16px; }
+.flag .stripe { display: inline-block; font-weight: 700; font-size: 0.85rem; padding: 3px 12px; border-radius: 999px; margin-bottom: 4px; }
+.flag.high { box-shadow: inset 10px 0 0 var(--red); }
 .flag.high .stripe { background: var(--red); color: #fff; }
-.flag.caution { border-left-color: var(--amber); }
+.flag.caution { box-shadow: inset 10px 0 0 var(--amber); }
 .flag.caution .stripe { background: var(--amber); color: var(--amber-ink); }
-.flag.info { border-left-color: var(--cobalt); }
-.flag.info .stripe { background: var(--cobalt); color: #fff; }
-.drugs { font-weight: 600; margin-bottom: 6px; }
-.explain { background: var(--chalk); border-radius: 8px; padding: 10px 12px; }
+.flag.info { box-shadow: inset 10px 0 0 var(--slate); }
+.flag.info .stripe { background: var(--slate); color: var(--cream); }
+.drugs { font-weight: 700; margin-bottom: 6px; }
+.explain { background: var(--cream); border-radius: 16px; padding: 10px 14px; }
 
-.ok { background: var(--green-bg); color: #1d4f39; border-left: 10px solid var(--green); border-radius: 10px; padding: 12px 14px; }
-.err { color: var(--red); font-weight: 600; }
+.ok { background: var(--green-bg); color: #1d4f39; box-shadow: inset 10px 0 0 var(--green); border-radius: 24px; padding: 14px 18px 14px 28px; }
+.err { color: var(--red); font-weight: 700; }
 .disclaimer { color: var(--muted); font-size: 0.8rem; margin-top: 24px; }
 
+/* Phone tab bar */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto;
-  display: flex; background: var(--paper); border-top: 1.5px solid var(--line);
+  display: flex; background: var(--slate);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.tabs button { flex: 1; min-height: 60px; background: none; border: 0; border-radius: 0; color: var(--muted); font-size: 0.85rem; }
-.tabs button.on { color: var(--cobalt); box-shadow: inset 0 3px 0 var(--cobalt); }
+.tabs button { flex: 1; min-height: 60px; padding: 0 2px; background: none; border: 0; border-radius: 0; color: var(--muted-on-dark); font-size: 0.9rem; }
+.tabs button.on { color: var(--cream); font-weight: 700; box-shadow: inset 0 3px 0 var(--sage-light); }
+.tabs :focus-visible, .top :focus-visible { outline-color: var(--sage-light); outline-offset: -3px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-.offline { margin: 0; padding: 8px 18px; background: var(--amber-bg); color: var(--amber-ink); font-size: 0.85rem; font-weight: 600; border-bottom: 1.5px solid var(--amber); }
+.offline { margin: 0; padding: 8px 18px; background: var(--amber-bg); color: var(--amber-ink); font-size: 0.85rem; font-weight: 700; border-bottom: 1.5px solid var(--amber); }
 .filebtn.off { opacity: 0.6; cursor: not-allowed; }
 .filebtn.off input { cursor: not-allowed; }
-.install { padding-bottom: 14px; }
+.install { padding-bottom: 22px; }
 .install .hint { margin: 0; }
 .choices { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
-.camera { background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+.camera { background: #000; border-radius: 24px; overflow: hidden; margin-bottom: 12px; }
 .camera video { display: block; width: 100%; max-height: 60dvh; object-fit: cover; }
 
-/* Header profile button */
-.who-group { display: flex; gap: 8px; align-items: center; }
-.profile-btn { min-height: 40px; padding: 6px 12px; background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.6); font-weight: 600; }
-.profile-btn[aria-current="page"] { background: #fff; color: var(--cobalt); }
-.tabs button { font-size: 0.78rem; padding: 0 4px; }
-
 /* Schedule */
-.timeline { list-style: none; margin: 0 0 18px; padding: 0; border-left: 3px solid var(--cobalt); }
+.timeline { list-style: none; margin: 0 0 18px; padding: 0; border-left: 3px solid var(--slate); }
 .timeline > li { display: grid; grid-template-columns: 5.4rem 1fr; gap: 10px; padding: 10px 0 10px 12px; position: relative; }
-.timeline > li::before { content: ""; position: absolute; left: -8.5px; top: 16px; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 3px solid var(--cobalt); }
+.timeline > li::before { content: ""; position: absolute; left: -8.5px; top: 16px; width: 14px; height: 14px; border-radius: 50%; background: var(--cream); border: 3px solid var(--slate); }
 .timeline time { font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 2px; }
 .dose + .dose { margin-top: 8px; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-.tag { font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 4px; background: var(--chalk); border: 1px solid var(--line); color: var(--muted); }
+.tag { font-size: 0.75rem; font-weight: 700; padding: 1px 10px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); }
 .tag.with-food { background: var(--green-bg); border-color: transparent; color: #1d4f39; }
 .tag.empty-stomach { background: var(--amber-bg); border-color: transparent; color: var(--amber-ink); }
-.tag.moved { background: #e8edf8; border-color: transparent; color: var(--cobalt); }
-.tag.overnight { background: var(--ink); border-color: transparent; color: #fff; }
-.note { background: #e8edf8; border-left: 10px solid var(--cobalt); border-radius: 10px; padding: 10px 14px 2px; margin-bottom: 12px; }
+.tag.moved { background: var(--pill); border-color: transparent; color: var(--slate); }
+.tag.overnight { background: var(--slate); border-color: transparent; color: var(--cream); }
+.note { background: var(--paper); box-shadow: inset 10px 0 0 var(--slate); border-radius: 24px; padding: 12px 18px 4px 28px; margin-bottom: 12px; }
 .plain { list-style: none; padding: 0; margin: 0 0 14px; }
 .plain li { padding: 6px 0; border-bottom: 1px solid var(--line); }
-.routine { margin-top: 20px; background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 14px; }
-.routine summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.routine { margin-top: 20px; border-radius: 32px; padding: 14px 24px; }
+.routine summary { cursor: pointer; font-weight: 700; min-height: 32px; }
 .routine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0 12px; margin-top: 10px; }
 
-/* Passport */
-.passport { background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
-.passport header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 3px solid var(--cobalt); padding-bottom: 12px; margin-bottom: 12px; }
+/* Passport: a light document card */
+.passport { background: var(--paper); border: 0; border-radius: 24px; padding: 22px; margin-bottom: 16px; }
+.passport header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 3px solid var(--slate); padding-bottom: 12px; margin-bottom: 12px; }
 .passport header h2 { margin: 0; }
 .passport .who { font-size: 1.2rem; font-weight: 700; margin: 4px 0 0; }
 .passport header img { flex: none; image-rendering: pixelated; }
 .passport h3 { font-size: 1rem; margin: 14px 0 4px; }
-.passport .allergies { background: var(--red-bg); border-left: 10px solid var(--red); border-radius: 8px; padding: 8px 12px; }
+.passport .allergies { background: var(--red-bg); box-shadow: inset 10px 0 0 var(--red); border-radius: 16px; padding: 10px 14px 10px 24px; }
 .passport .allergies h3 { margin-top: 0; color: var(--red); }
 .passport .allergies p { font-weight: 700; margin: 0; }
 .passport table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.passport th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1.5px solid var(--line); padding: 4px 6px 4px 0; }
+.passport th { text-align: left; color: var(--muted); font-weight: 700; border-bottom: 1.5px solid var(--line); padding: 4px 6px 4px 0; }
 .passport td { border-bottom: 1px solid var(--line); padding: 6px 6px 6px 0; vertical-align: top; }
-.pill { font-size: 0.75rem; font-weight: 800; padding: 1px 8px; border-radius: 3px; }
+.pill { font-size: 0.75rem; font-weight: 700; padding: 1px 10px; border-radius: 999px; }
 .pill.high { background: var(--red); color: #fff; }
 .pill.caution { background: var(--amber); color: var(--amber-ink); }
-.pill.info { background: var(--cobalt); color: #fff; }
+.pill.info { background: var(--slate); color: var(--cream); }
 .shared { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 24px); }
-.banner { background: var(--amber-bg); color: var(--amber-ink); border-radius: 8px; padding: 10px 12px; font-weight: 600; }
+.banner { background: var(--amber-bg); color: var(--amber-ink); border-radius: 16px; padding: 10px 14px; font-weight: 700; }
 
 @media print {
   .no-print, .tabs, .top { display: none !important; }
   html { font-size: 12pt; }
   body { background: #fff; }
   main, .shared { padding: 0 !important; }
-  .passport { border: none; padding: 0; }
+  .passport { border: none; padding: 0; background: #fff; }
   .passport, .passport * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .shell { display: block; height: auto; }
+  main { overflow: visible; }
 }
 button.off, .choices button:disabled { cursor: not-allowed; }
 
 /* FDA label quote on safety flags */
-.excerpt { margin: 4px 0 12px; padding: 8px 12px; border-left: 3px solid var(--line); background: var(--chalk); border-radius: 0 8px 8px 0; font-family: var(--serif); font-size: 0.92rem; line-height: 1.55; color: var(--ink); }
-.src a { color: var(--cobalt); }
+.excerpt { margin: 4px 0 12px; padding: 8px 14px; border-left: 3px solid var(--brown); background: var(--cream); border-radius: 0 14px 14px 0; font-family: var(--serif); font-size: 0.92rem; line-height: 1.55; color: var(--slate); }
+.src a { color: var(--slate); }
 
 /* Check before buying */
 .buy-result + .buy-result { margin-top: 28px; padding-top: 20px; border-top: 1.5px solid var(--line); }
-.verdict { border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; border: 2px solid transparent; }
+.verdict { border-radius: 24px; padding: 16px 20px; margin-bottom: 16px; border: 2px solid transparent; }
 .verdict h3 { margin: 2px 0 6px; font-size: 1.3rem; }
 .verdict p { margin: 0; }
-.verdict-label { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.verdict-label { font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .verdict.avoid { background: var(--red-bg); border-color: var(--red); }
 .verdict.avoid .verdict-label { color: var(--red); }
 .verdict.ask { background: var(--amber-bg); border-color: var(--amber); }
 .verdict.ask .verdict-label { color: var(--amber-ink); }
 .verdict.ok { background: var(--green-bg); border-color: var(--green); }
 .verdict.ok .verdict-label { color: var(--green); }
-.verdict.unknown { background: #e8edf8; border-color: var(--cobalt); }
-.verdict.unknown .verdict-label { color: var(--cobalt); }
+.verdict.unknown { background: var(--paper); border-color: var(--slate); }
+.verdict.unknown .verdict-label { color: var(--slate); }
 .notes-head { margin-top: 18px; }
 .typed { max-width: 420px; margin: 22px auto 0; text-align: left; }
 .typed .row { align-items: stretch; margin-top: 4px; }
 .typed .row button { flex: none; }
 
-/* Type in a medicine */
-.manual .hint.good { color: var(--green); font-weight: 600; }
+/* Type in / edit a medicine (colors mapped to the new palette) */
+.manual .hint.good { color: var(--green); font-weight: 700; }
 .seg-group { border: 0; padding: 0; margin: 0 0 14px; }
-.seg-group legend { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.seg-group legend { font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; padding: 0; }
 .seg { display: flex; flex-wrap: wrap; gap: 8px; }
-.seg button { flex: 1 1 auto; min-width: 46%; min-height: 52px; background: var(--paper); border: 1.5px solid var(--line); color: var(--ink); font-weight: 600; }
-.seg button[aria-pressed="true"] { background: var(--cobalt); border-color: var(--cobalt); color: #fff; }
-.preview { background: #e8edf8; border-radius: 10px; padding: 10px 14px 2px; margin: 4px 0 8px; }
-
-/* Editable cabinet entries */
-.meds li { padding: 0 6px 0 0; }
-.med-main { flex: 1; min-width: 0; display: block; text-align: left; background: none; border: 0; padding: 12px 14px; font-weight: 400; border-radius: 10px; }
-.med-main:hover { background: var(--chalk); }
-.tag.date-red { background: var(--red-bg); color: var(--red); border-color: transparent; }
-.tag.date-amber { background: var(--amber-bg); color: var(--amber-ink); border-color: transparent; }
+.seg button { flex: 1 1 auto; min-width: 46%; min-height: 52px; padding: 10px 16px; background: var(--pill); border: 1.5px solid transparent; color: var(--slate); }
+.seg button[aria-pressed="true"] { background: var(--slate); color: var(--cream); font-weight: 700; }
+.preview { background: var(--paper); box-shadow: inset 8px 0 0 var(--sage); border-radius: 24px; padding: 12px 18px 2px 26px; margin: 4px 0 8px; }
 .more { margin: 4px 0 14px; }
-.more summary { cursor: pointer; font-weight: 600; color: var(--cobalt); min-height: 36px; }
+.more summary { cursor: pointer; font-weight: 700; color: var(--slate); min-height: 36px; }
 .more .row { margin-top: 8px; }
 .buy-entry { margin-top: 26px; padding-top: 16px; border-top: 1.5px solid var(--line); }
 .buy-entry p { margin: 0 0 4px; color: var(--muted); }
+
+/* Editable cabinet cards: photo + facts are one button inside Nick's .med-card */
+.med-edit {
+  flex: 1; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 22px;
+  display: flex; gap: 14px; align-items: center; justify-content: flex-start;
+  background: transparent; color: inherit; text-align: left; font: inherit;
+}
+.med-edit:hover .med-photo { box-shadow: inset 0 0 0 2px var(--sage); }
+.med-facts { display: block; }
+.med-facts .fact { display: block; }
+.med-facts .fact + .fact { margin-top: 6px; }
+.fact-val { color: var(--muted); overflow-wrap: anywhere; }
+.med-badges { margin-top: 8px; }
+.tag.date-red { background: var(--red-bg); color: var(--red); border-color: transparent; }
+.tag.date-amber { background: var(--amber-bg); color: var(--amber-ink); border-color: transparent; }
+
+/* Desktop: full-width app shell. Header across the top, tabs become a left sidebar,
+   only the content area scrolls. Phones keep the bottom tab bar above. */
+@media (min-width: 900px) {
+  .shell {
+    max-width: none; height: 100dvh; min-height: 0;
+    display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "top top" "offline offline" "nav main";
+  }
+  .top { grid-area: top; padding: 14px 28px; }
+  .wordmark { height: 56px; }
+  .offline { grid-area: offline; padding: 8px 28px; }
+
+  /* Sidebar continues the slate header, forming an L around the cream content */
+  .tabs {
+    grid-area: nav; position: static; max-width: none; margin: 0; padding: 12px 0;
+    flex-direction: column; overflow-y: auto;
+  }
+  .tabs button { flex: none; min-height: 48px; justify-content: flex-start; padding: 0 24px; font-size: 1.05rem; }
+  .tabs button:hover { background: var(--slate-2); color: var(--cream); }
+  .tabs button.on { background: var(--slate-2); color: var(--cream); box-shadow: inset 4px 0 0 var(--sage-light); }
+
+  main { grid-area: main; overflow-y: auto; padding: 28px 40px 48px; }
+
+  /* Forms and reading text keep a comfortable line length */
+  .card, .routine, .timeline, .plain, .note, .verdict, .typed, .ok, .banner, .manual, .buy-entry { max-width: 760px; }
+  .passport, .shared { max-width: 820px; }
+
+  /* Lists flow into columns */
+  .cabinet-box { padding: 24px 24px 24px; }
+  .meds { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px 18px; align-items: start; }
+  .med-card { margin: 0; }
+  .flags { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
+  .flags .flag { margin: 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; margin-bottom: 14px; }
+  .cards .card { margin: 0; max-width: none; }
+}
