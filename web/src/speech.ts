@@ -1,7 +1,8 @@
 // Read text aloud: ElevenLabs first (better Spanish and Arabic), browser voice as the fallback.
 import { TtsUnavailable, ttsAudio } from "./api";
 
-const BROWSER_LANG: Record<string, string> = { English: "en-US", Español: "es-ES", العربية: "ar-SA" };
+import { findLanguage } from "./languages";
+
 const cache = new Map<string, string>(); // text -> object URL, so replays don't spend credits
 let current: HTMLAudioElement | null = null;
 let elevenLabsOff = false;
@@ -30,7 +31,7 @@ export async function speak(text: string, language: string): Promise<"elevenlabs
   }
   if (!("speechSynthesis" in window)) return "none";
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = BROWSER_LANG[language] ?? "en-US";
+  u.lang = findLanguage(language).code;
   speechSynthesis.speak(u);
   return "browser";
 }

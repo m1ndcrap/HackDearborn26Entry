@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { useAppState } from "../store";
 import type { ReadingLevel } from "../types";
 import { useInstall } from "../useInstall";
+import LanguagePicker from "../LanguagePicker";
 
 const split = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
@@ -31,14 +32,7 @@ export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppSt
           <input defaultValue={p.conditions.join(", ")} key={p.id + "c"} onBlur={(e) => app.updateProfile({ ...p, conditions: split(e.target.value) })} placeholder="kidney disease" />
         </label>
         <div className="row">
-          <label>
-            Language
-            <select value={p.language} onChange={(e) => app.updateProfile({ ...p, language: e.target.value })}>
-              <option>English</option>
-              <option>Español</option>
-              <option>العربية</option>
-            </select>
-          </label>
+          <LanguagePicker variant="select" label="Explanation and voice language" value={p.language} onChange={(language) => app.updateProfile({ ...p, language })} />
           <label>
             Explanations
             <select value={p.reading_level} onChange={(e) => app.updateProfile({ ...p, reading_level: e.target.value as ReadingLevel })}>
@@ -59,6 +53,14 @@ export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppSt
           </button>
         </div>
       )}
+
+      <h2>App language</h2>
+      <div className="card">
+        <LanguagePicker variant="select" label="Language for the app's buttons and screens" value={app.state.uiLanguage} onChange={app.setUiLanguage} />
+        <button className="ghost" onClick={app.restartOnboarding}>
+          Show the welcome screens again
+        </button>
+      </div>
 
       <h2>Add a family member</h2>
       <div className="card row">

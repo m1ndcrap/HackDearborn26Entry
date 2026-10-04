@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_ROUTINE, type Routine } from "./schedule";
+import { deviceLanguage } from "./languages";
 import type { Medication, Profile } from "./types";
 
 export interface AppState {
@@ -9,6 +10,8 @@ export interface AppState {
   routine: Record<string, Routine>; // profile id -> daily routine (local only, not sent to the API)
   remindersOn: boolean;
   photos: Record<string, string>; // med id -> label thumbnail (data URL). Local only, kept out of Medication so it never reaches the API
+  uiLanguage: string; // language of the app's own text (per device); each profile has its own explanation language
+  onboarded: boolean; // false until the welcome screens are finished or skipped
 }
 
 const KEY = "apothecary:v1";
@@ -34,10 +37,11 @@ function loadPhotos(): Record<string, string> {
 }
 
 function initial(): AppState {
-  const base = { routine: {}, remindersOn: false, photos: loadPhotos() };
+  const base = { routine: {}, remindersOn: false, photos: loadPhotos(), uiLanguage: deviceLanguage().name, onboarded: false };
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...base, ...JSON.parse(raw), photos: base.photos }; // older saves lack routine/remindersOn
+    // Older saves lack the newer fields. Someone who already used the app skips the welcome screens.
+    if (raw) return { ...base, onboarded: true, uiLanguage: "English", ...JSON.parse(raw), photos: base.photos };
   } catch {
     /* ignore corrupt storage */
   }
@@ -113,6 +117,15 @@ export function useAppState() {
       })),
     setRoutine: (r: Routine) => setState((s) => ({ ...s, routine: { ...s.routine, [profile.id]: r } })),
     setRemindersOn: (on: boolean) => setState((s) => ({ ...s, remindersOn: on })),
+    setUiLanguage: (language: string) => setState((s) => ({ ...s, uiLanguage: language })),
+    // Welcome screens: fill in the first profile and mark setup done
+    finishOnboarding: (p?: Partial<Profile>) =>
+      setState((s) => {
+        const first = s.profiles.find((x) => x.id === s.activeId) ?? s.profiles[0];
+        const profiles = p ? s.profiles.map((x) => (x.id === first.id ? { ...x, ...p, id: x.id } : x)) : s.profiles;
+        return { ...s, profiles, onboarded: true };
+      }),
+    restartOnboarding: () => setState((s) => ({ ...s, onboarded: false })),
   };
 }
 
