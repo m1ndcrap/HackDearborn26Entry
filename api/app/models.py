@@ -71,3 +71,21 @@ class ExplainRequest(BaseModel):
 
 class ExplainResponse(BaseModel):
     text: str
+
+
+class OTCCheckRequest(BaseModel):
+    profile: Profile
+    cabinet: list[Medication]  # what the person already takes
+    candidates: list[Medication]  # what they're thinking of buying (scanned or typed)
+
+
+class OTCResult(BaseModel):
+    medication: Medication  # the candidate, with ingredients filled in by the server
+    verdict: Literal["ok", "ask", "avoid", "unknown"]
+    summary: str
+    flags: list[SafetyFlag]  # only flags that involve this candidate
+
+
+class OTCCheckResponse(BaseModel):
+    results: list[OTCResult]
+    checked_against: int

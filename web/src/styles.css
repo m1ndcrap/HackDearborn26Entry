@@ -178,3 +178,22 @@ button.off, .choices button:disabled { cursor: not-allowed; }
 /* FDA label quote on safety flags */
 .excerpt { margin: 4px 0 12px; padding: 8px 12px; border-left: 3px solid var(--line); background: var(--chalk); border-radius: 0 8px 8px 0; font-family: var(--serif); font-size: 0.92rem; line-height: 1.55; color: var(--ink); }
 .src a { color: var(--cobalt); }
+
+/* Check before buying */
+.buy-result + .buy-result { margin-top: 28px; padding-top: 20px; border-top: 1.5px solid var(--line); }
+.verdict { border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; border: 2px solid transparent; }
+.verdict h3 { margin: 2px 0 6px; font-size: 1.3rem; }
+.verdict p { margin: 0; }
+.verdict-label { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.verdict.avoid { background: var(--red-bg); border-color: var(--red); }
+.verdict.avoid .verdict-label { color: var(--red); }
+.verdict.ask { background: var(--amber-bg); border-color: var(--amber); }
+.verdict.ask .verdict-label { color: var(--amber-ink); }
+.verdict.ok { background: var(--green-bg); border-color: var(--green); }
+.verdict.ok .verdict-label { color: var(--green); }
+.verdict.unknown { background: #e8edf8; border-color: var(--cobalt); }
+.verdict.unknown .verdict-label { color: var(--cobalt); }
+.notes-head { margin-top: 18px; }
+.typed { max-width: 420px; margin: 22px auto 0; text-align: left; }
+.typed .row { align-items: stretch; margin-top: 4px; }
+.typed .row button { flex: none; }

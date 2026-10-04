@@ -7,10 +7,11 @@ import Cabinet from "./screens/Cabinet";
 import Passport, { SharedPassport } from "./screens/Passport";
 import ProfileScreen from "./screens/ProfileScreen";
 import Report from "./screens/Report";
+import BuyCheck from "./screens/BuyCheck";
 import Scan from "./screens/Scan";
 import Schedule from "./screens/Schedule";
 
-type Tab = "cabinet" | "scan" | "report" | "schedule" | "passport" | "profile";
+type Tab = "cabinet" | "scan" | "report" | "schedule" | "passport" | "profile" | "buy";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "cabinet", label: "Cabinet" },
@@ -82,7 +83,7 @@ function MainApp() {
       )}
 
       <main>
-        {tab === "cabinet" && <Cabinet meds={app.meds} profile={app.profile} onScan={() => setTab("scan")} onRemove={app.removeMed} />}
+        {tab === "cabinet" && <Cabinet meds={app.meds} profile={app.profile} onScan={() => setTab("scan")} onBuyCheck={() => setTab("buy")} onRemove={app.removeMed} />}
         {tab === "scan" && (
           <Scan
             cabinet={app.meds}
@@ -92,6 +93,7 @@ function MainApp() {
             }}
           />
         )}
+        {tab === "buy" && <BuyCheck profile={app.profile} cabinet={app.meds} onAdd={(med) => app.addMeds([med])} />}
         {tab === "report" && <Report profile={app.profile} meds={app.meds} onScan={() => setTab("scan")} />}
         {tab === "schedule" && <Schedule app={app} onScan={() => setTab("scan")} />}
         {tab === "passport" && <Passport app={app} />}

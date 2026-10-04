@@ -9,7 +9,7 @@ const LOW = 0.7;
 // Live camera needs a secure context (https or localhost) and getUserMedia support.
 const canUseLiveCamera = () => window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
 
-function CameraView({ onShot, onCancel }: { onShot: (f: File) => void; onCancel: () => void }) {
+export function CameraView({ onShot, onCancel }: { onShot: (f: File) => void; onCancel: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
