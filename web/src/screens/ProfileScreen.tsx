@@ -3,6 +3,8 @@ import type { useAppState } from "../store";
 import type { ReadingLevel } from "../types";
 import { useInstall } from "../useInstall";
 import LanguagePicker from "../LanguagePicker";
+import AboutNote from "../AboutNote";
+import TextSizePicker from "../TextSizePicker";
 
 const split = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
@@ -62,6 +64,11 @@ export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppSt
         </button>
       </div>
 
+      <h2>Display</h2>
+      <div className="card display">
+        <TextSizePicker value={app.state.textSize} onChange={app.setTextSize} />
+      </div>
+
       <h2>Add a family member</h2>
       <div className="card row">
         <input aria-label="Name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Mom" />
@@ -95,6 +102,9 @@ export default function ProfileScreen({ app }: { app: ReturnType<typeof useAppSt
           </div>
         </>
       )}
+
+      <h2>About Pocket Apothecary</h2>
+      <AboutNote />
     </section>
   );
 }
