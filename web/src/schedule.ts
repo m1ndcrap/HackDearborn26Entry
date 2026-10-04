@@ -48,10 +48,13 @@ export function fmtTime(min: number): string {
 }
 
 type Food = "with" | "empty" | null;
+type Slot = "wake" | "lunch" | "dinner" | "bed";
 type Parsed =
-  | { kind: "count"; count: number; food: Food; slot: "wake" | "lunch" | "dinner" | "bed" | null }
-  | { kind: "interval"; hours: number; food: Food }
-  | { kind: "weekly"; food: Food }
+  | { kind: "count"; count: number; food: Food; slot: Slot | null }
+  | { kind: "slots"; slots: Slot[]; food: Food } // one dose at each named time: "morning and evening"
+  | { kind: "times"; minutes: number[]; food: Food } // exact clock times: "at 11 pm", "8am and 8pm"
+  | { kind: "interval"; hours: number; food: Food; at?: number } // at: first dose, if the label gives a clock time
+  | { kind: "weekly"; food: Food; at?: number }
   | { kind: "prn" }
   | { kind: "unknown" };
 
@@ -65,13 +68,19 @@ export function parseDirections(text: string): Parsed {
       ? "with"
       : null;
 
-  if (/once (a|per|every) week|\bweekly\b|every week/.test(t)) return { kind: "weekly", food };
+  const clock = [...new Set(clockTimes(t))].sort((x, y) => x - y);
+  if (/once (a|per|every) week|\bweekly\b|every week/.test(t)) return { kind: "weekly", food, at: clock[0] };
 
   const iv = t.match(/every (\d+)(?:\s*(?:-|to)\s*(\d+))? ?(?:hours?|hrs?|h)\b/) ?? t.match(/\bq(\d+)h\b/);
   if (iv) {
     const hours = Math.max(Number(iv[1]), Number(iv[2] ?? 0));
-    if (hours >= 2 && hours <= 24) return { kind: "interval", hours, food };
+    if (hours >= 2 && hours <= 24) return { kind: "interval", hours, food, at: clock[0] };
   }
+
+  // Exact clock times win over guesses from words like "evening": "at 11 pm" used to land at dinner (6:30 PM)
+  // because only "pm" was read. Ignored if they cover fewer doses than an explicit count ("twice daily at 8 am").
+  const explicitCount = /four times|4 times|\b4x\b|\bqid\b/.test(t) ? 4 : /three times|3 times|\b3x\b|\btid\b/.test(t) ? 3 : /twice|two times|2 times|\b2x\b|\bbid\b/.test(t) ? 2 : 0;
+  if (clock.length && clock.length >= explicitCount) return { kind: "times", minutes: clock, food };
 
   const slot = /bedtime|at night|\bqhs\b|before bed/.test(t)
     ? "bed"
@@ -86,9 +95,29 @@ export function parseDirections(text: string): Parsed {
   if (/four times|4 times|\b4x\b|\bqid\b/.test(t)) return { kind: "count", count: 4, food, slot: null };
   if (/three times|3 times|\b3x\b|\btid\b/.test(t)) return { kind: "count", count: 3, food, slot: null };
   if (/twice|two times|2 times|\b2x\b|\bbid\b/.test(t)) return { kind: "count", count: 2, food, slot: null };
-  if (/once|one time|1 time|\b1x\b|\bdaily\b|every day|each day|a day|\bqd\b|\bqhs\b|bedtime/.test(t) || slot)
+
+  // "every morning and evening", "1 tablet in the morning and 1 at bedtime": each named time is a dose.
+  // Without this only one slot was picked and the other dose silently disappeared.
+  const named: Slot[] = [];
+  if (/morning|\bam\b|breakfast/.test(t)) named.push("wake");
+  if (/noon|lunch|midday/.test(t)) named.push("lunch");
+  if (/evening|\bpm\b|supper|dinner/.test(t)) named.push("dinner");
+  if (/bedtime|at night|\bqhs\b|before bed/.test(t)) named.push("bed");
+  if (named.length >= 2 && !/once|one time|1 time|\b1x\b|\bqd\b/.test(t)) return { kind: "slots", slots: named, food };
+  if (/once|one time|1 time|\b1x\b|\bdaily\b|every ?day|each day|a day|\bqd\b|\bqhs\b|bedtime/.test(t) || slot)
     return { kind: "count", count: 1, food, slot };
   return { kind: "unknown" };
+}
+
+/** "11 pm", "8am", "9:30 PM", "8:00 a.m." -> minutes after midnight */
+function clockTimes(t: string): number[] {
+  const out: number[] = [];
+  for (const m of t.matchAll(/\b(\d{1,2})(?::([0-5]\d))?\s*([ap])\.?\s?m\b\.?/g)) {
+    const h = Number(m[1]);
+    if (h < 1 || h > 12) continue;
+    out.push(((h % 12) + (m[3] === "p" ? 12 : 0)) * 60 + Number(m[2] ?? 0));
+  }
+  return out;
 }
 
 function baseTimes(p: Parsed, r: Routine): number[] {
@@ -97,18 +126,24 @@ function baseTimes(p: Parsed, r: Routine): number[] {
   const beforeMeal = (m: number) => Math.max(wake, m - 60);
   const spread = (n: number) => Array.from({ length: n }, (_, i) => wake + Math.round(((bed - wake) * i) / (n - 1)));
 
-  if (p.kind === "weekly") return [p.food === "with" ? bfast : wake];
+  // A single dose at a named time of day (or the default morning slot)
+  const oneTime = (slot: Slot | null, food: Food) => {
+    const at = slot === "bed" ? bed : slot === "dinner" ? dinner : slot === "lunch" ? lunch : food === "with" ? bfast : wake;
+    return food === "empty" && slot !== "bed" ? beforeMeal(at === wake ? bfast : at) : at;
+  };
+
+  if (p.kind === "weekly") return [p.at ?? (p.food === "with" ? bfast : wake)];
   if (p.kind === "interval") {
     const out: number[] = [];
-    for (let m = wake; m < wake + 1440; m += p.hours * 60) out.push(m);
+    const first = p.at ?? wake;
+    for (let m = first; m < first + 1440; m += p.hours * 60) out.push(m);
     return out;
   }
+  if (p.kind === "slots") return p.slots.map((s) => oneTime(s, p.food));
+  if (p.kind === "times") return p.minutes; // the label's own times, used as written
   if (p.kind !== "count") return [];
   const { count, food, slot } = p;
-  if (count === 1) {
-    const at = slot === "bed" ? bed : slot === "dinner" ? dinner : slot === "lunch" ? lunch : food === "with" ? bfast : wake;
-    return [food === "empty" && slot !== "bed" ? beforeMeal(at === wake ? bfast : at) : at];
-  }
+  if (count === 1) return [oneTime(slot, food)];
   if (food === "empty") return (count === 4 ? [...meals, bed] : count === 3 ? meals : [bfast, dinner]).map((m, i, a) => (i === a.length - 1 && count === 4 ? m : beforeMeal(m)));
   if (count === 2) return food === "with" ? [bfast, dinner] : [wake, Math.min(wake + 720, bed)];
   if (count === 3) return food === "with" ? meals : spread(3);
@@ -130,6 +165,9 @@ const SEPARATION_RULES: SepRule[] = [
   { a: ["ciprofloxacin"], b: MINERALS, before: 2, after: 6, why: "Minerals and antacids bind to ciprofloxacin. Its label advises taking it 2 hours before or 6 hours after them." },
   { a: ["levofloxacin", "doxycycline", "tetracycline"], b: MINERALS, before: 2, after: 2, why: "Minerals and antacids can stop this antibiotic from being absorbed. Keep them about 2 hours apart." },
 ];
+
+const MIN_SAME_MED_GAP = 120; // minutes between two doses of the same medicine when one has to move
+const SLOT_STEP = 30; // minutes between candidate times when looking for room
 
 const ingredientsOf = (m: Medication) =>
   (m.ingredients?.length ? m.ingredients : [m.ingredient || m.name]).map((s) => s.toLowerCase());
@@ -166,8 +204,31 @@ export function buildSchedule(meds: Medication[], routine: Routine = DEFAULT_ROU
   }
 
   // Space out separated pairs by moving the B dose (usually the supplement or antacid).
+  // Each moved dose gets the first time that clears every rule AND stays MIN_SAME_MED_GAP away from the same
+  // medicine's other doses. Moving doses independently to one fixed "safe" time used to stack them
+  // (Cipro twice a day + Tums three times a day put two Tums doses at 1:00 PM).
   const byId = new Map(meds.map((m) => [m.id, m]));
-  const moved = new Map<string, { dose: Dose; apart: Set<string>; why: Set<string> }>();
+  const dayEnd = bed >= wake ? bed : bed + 1440; // bedtime after midnight
+  // Measure every dose from wake-up, so a 1:30 AM bedtime dose counts as late tonight, not early this morning
+  for (const d of doses) d.minutes = wake + ((((d.minutes - wake) % 1440) + 1440) % 1440);
+  const clearOfRules = (b: Dose, t: number) =>
+    SEPARATION_RULES.every(
+      (rule) =>
+        !matches(byId.get(b.medId)!, rule.b) ||
+        doses.every((a) => a.medId === b.medId || !matches(byId.get(a.medId)!, rule.a) || t - a.minutes >= rule.after * 60 || t - a.minutes <= -rule.before * 60),
+    );
+  // Only doses already in a safe spot count: a sibling that still breaks a rule is about to move too
+  const clearOfOwnDoses = (b: Dose, t: number) =>
+    doses.every((o) => o === b || o.medId !== b.medId || !clearOfRules(o, o.minutes) || Math.abs(o.minutes - t) >= MIN_SAME_MED_GAP);
+  const findSlot = (b: Dose, later: number, earlier: number): number | null => {
+    // Preferred: just after A, then further after; otherwise just before A, then further before
+    for (let t = later; t <= dayEnd; t += SLOT_STEP) if (clearOfRules(b, t) && clearOfOwnDoses(b, t)) return t;
+    for (let t = earlier; t >= wake; t -= SLOT_STEP) if (clearOfRules(b, t) && clearOfOwnDoses(b, t)) return t;
+    return null;
+  };
+
+  const moved = new Map<string, { name: string; doses: Set<Dose>; apart: Set<string>; why: Set<string> }>(); // by medicine
+  const stuck = new Map<string, ScheduleNote>(); // one "no room" note per pair of medicines
   for (let pass = 0; pass < 3; pass++) {
     let changed = false;
     for (const rule of SEPARATION_RULES) {
@@ -175,20 +236,22 @@ export function buildSchedule(meds: Medication[], routine: Routine = DEFAULT_ROU
         for (const b of doses.filter((d) => d.medId !== a.medId && matches(byId.get(d.medId)!, rule.b))) {
           const gap = b.minutes - a.minutes;
           if (gap >= rule.after * 60 || gap <= -rule.before * 60) continue;
-          const later = a.minutes + rule.after * 60;
-          const earlier = a.minutes - rule.before * 60;
-          const target = later <= bed ? later : earlier >= wake ? earlier : null;
+          const target = findSlot(b, a.minutes + rule.after * 60, a.minutes - rule.before * 60);
           if (target === null) {
-            notes.push({ text: `${b.name} and ${a.name} are too close together, and there's no room in the day to separate them. Ask your pharmacist.`, why: rule.why });
+            stuck.set(`${b.medId}|${a.medId}`, {
+              text: `${b.name} and ${a.name} are too close together, and there's no room in the day to separate them. Ask your pharmacist.`,
+              why: rule.why,
+            });
             continue;
           }
           b.minutes = target;
           if (!b.tags.includes("moved")) b.tags.push("moved");
           b.tags = b.tags.filter((t) => t !== "with food" && t !== "empty stomach");
-          const rec = moved.get(b.id) ?? { dose: b, apart: new Set<string>(), why: new Set<string>() };
+          const rec = moved.get(b.medId) ?? { name: b.name, doses: new Set<Dose>(), apart: new Set<string>(), why: new Set<string>() };
+          rec.doses.add(b);
           rec.apart.add(a.name);
           rec.why.add(rule.why);
-          moved.set(b.id, rec);
+          moved.set(b.medId, rec);
           changed = true;
         }
       }
@@ -196,11 +259,12 @@ export function buildSchedule(meds: Medication[], routine: Routine = DEFAULT_ROU
     if (!changed) break;
   }
 
-  for (const { dose, apart, why } of moved.values()) {
-    const names = [...apart];
-    const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
-    notes.push({ text: `Moved ${dose.name} to ${fmtTime(wrap(dose.minutes))} to keep it apart from ${list}.`, why: [...why].join(" ") });
+  const andList = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}` : xs[0]);
+  for (const { name, doses: ds, apart, why } of moved.values()) {
+    const times = [...ds].map((d) => d.minutes).sort((x, y) => x - y).map((m) => fmtTime(wrap(m)));
+    notes.push({ text: `Moved ${name} to ${andList(times)} to keep it apart from ${andList([...apart])}.`, why: [...why].join(" ") });
   }
+  notes.push(...stuck.values());
 
   for (const d of doses) {
     d.minutes = wrap(d.minutes);

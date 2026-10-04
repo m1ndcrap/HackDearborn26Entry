@@ -274,21 +274,26 @@ export default function Scan({ cabinet, routine, onAdd, onBuyCheck, startTyping 
           Type it in
         </button>
       </div>
-      {onBuyCheck && (
+      {(onBuyCheck || onUseDischarge) && (
+        // Other ways in, as matching label + link pairs
         <div className="buy-entry">
-          <p>At the store?</p>
-          <button className="ghost" onClick={onBuyCheck} disabled={busy}>
-            Check before buying →
-          </button>
+          {onBuyCheck && (
+            <>
+              <p>At the store?</p>
+              <button className="ghost" onClick={onBuyCheck} disabled={busy}>
+                Check before buying →
+              </button>
+            </>
+          )}
+          {onUseDischarge && (
+            <>
+              <p>Home from the hospital?</p>
+              <button className="ghost" onClick={onUseDischarge} disabled={busy}>
+                Scan the discharge sheet →
+              </button>
+            </>
+          )}
         </div>
-      )}
-      {onUseDischarge && (
-        <p className="hint">
-          Home from the hospital?{" "}
-          <button className="link" onClick={onUseDischarge}>
-            Scan the discharge sheet here instead
-          </button>
-        </p>
       )}
       {!online && <p className="hint">Scanning needs a connection. Your cabinet still works offline.</p>}
       {/* Hidden inputs: the library picker has no capture attribute; the native-camera one is the fallback when live camera isn't available (e.g. http on a phone). */}
