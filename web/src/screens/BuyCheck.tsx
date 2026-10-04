@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { checkOtc, scanImage } from "../api";
+import { makeThumbnail } from "../thumbnail";
 import { findCabinetMatch } from "../duplicates";
 import type { Medication, OtcResult, Profile } from "../types";
 import { useOnline } from "../useOnline";
@@ -18,7 +19,7 @@ const HEADLINE = {
 interface Props {
   profile: Profile;
   cabinet: Medication[];
-  onAdd: (med: Medication) => void;
+  onAdd: (med: Medication, photo: string | null) => void;
 }
 
 export default function BuyCheck({ profile, cabinet, onAdd }: Props) {
@@ -29,6 +30,7 @@ export default function BuyCheck({ profile, cabinet, onAdd }: Props) {
   const [typed, setTyped] = useState("");
   const [results, setResults] = useState<OtcResult[] | null>(null);
   const [added, setAdded] = useState<string[]>([]);
+  const [photo, setPhoto] = useState<string | null>(null); // thumbnail of the scanned box, kept if it's added to the cabinet
   const libraryRef = useRef<HTMLInputElement>(null);
   const nativeCameraRef = useRef<HTMLInputElement>(null);
 
@@ -51,7 +53,8 @@ export default function BuyCheck({ profile, cabinet, onAdd }: Props) {
     setError("");
     setBusy("Reading the box…");
     try {
-      const scan = await scanImage(file);
+      const [scan, thumb] = await Promise.all([scanImage(file), makeThumbnail(file)]);
+      setPhoto(thumb);
       if (scan.medications.length === 0) {
         setBusy("");
         setError("We couldn't find a medicine in that photo. Try again closer to the front of the box, or type the name.");
@@ -68,6 +71,7 @@ export default function BuyCheck({ profile, cabinet, onAdd }: Props) {
     const name = typed.trim();
     if (!name) return;
     setError("");
+    setPhoto(null);
     run([{ id: "", name, warnings: [], confidence: 1 }]);
   }
 
@@ -127,7 +131,7 @@ export default function BuyCheck({ profile, cabinet, onAdd }: Props) {
                   <button
                     className={r.verdict === "ok" ? "primary" : "secondary"}
                     onClick={() => {
-                      onAdd({ ...med, id: med.id || Math.random().toString(36).slice(2, 10) });
+                      onAdd({ ...med, id: med.id || Math.random().toString(36).slice(2, 10) }, photo);
                       setAdded((a) => [...a, med.id]);
                     }}
                   >

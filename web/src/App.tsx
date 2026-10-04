@@ -58,8 +58,16 @@ function MainApp() {
   return (
     <div className="shell">
       <header className="top no-print">
-        <h1>Pocket Apothecary</h1>
+        <h1>
+          <img className="wordmark" src="/logo-wordmark.svg" alt="Pocket Apothecary" />
+        </h1>
         <div className="who-group">
+          <button className="avatar-btn" aria-label="Profile" aria-current={tab === "profile" ? "page" : undefined} onClick={() => setTab("profile")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <circle cx="12" cy="8.5" r="4" />
+              <path d="M4.5 20.5c1.2-3.6 4.1-5.5 7.5-5.5s6.3 1.9 7.5 5.5" />
+            </svg>
+          </button>
           <label className="who">
             <span className="sr">Who is this for</span>
             <select value={app.profile.id} onChange={(e) => app.setActive(e.target.value)}>
@@ -70,9 +78,6 @@ function MainApp() {
               ))}
             </select>
           </label>
-          <button className="profile-btn" aria-current={tab === "profile" ? "page" : undefined} onClick={() => setTab("profile")}>
-            Profile
-          </button>
         </div>
       </header>
 
@@ -91,17 +96,17 @@ function MainApp() {
       </nav>
 
       <main>
-        {tab === "cabinet" && <Cabinet meds={app.meds} profile={app.profile} onScan={() => setTab("scan")} onBuyCheck={() => setTab("buy")} onRemove={app.removeMed} />}
+        {tab === "cabinet" && <Cabinet meds={app.meds} photos={app.state.photos} profile={app.profile} onScan={() => setTab("scan")} onBuyCheck={() => setTab("buy")} onRemove={app.removeMed} />}
         {tab === "scan" && (
           <Scan
             cabinet={app.meds}
-            onAdd={(meds, replaceIds) => {
-              app.addMeds(meds, replaceIds);
+            onAdd={(meds, replaceIds, photo) => {
+              app.addMeds(meds, replaceIds, photo);
               setTab("report");
             }}
           />
         )}
-        {tab === "buy" && <BuyCheck profile={app.profile} cabinet={app.meds} onAdd={(med) => app.addMeds([med])} />}
+        {tab === "buy" && <BuyCheck profile={app.profile} cabinet={app.meds} onAdd={(med, photo) => app.addMeds([med], [], photo)} />}
         {tab === "report" && <Report profile={app.profile} meds={app.meds} onScan={() => setTab("scan")} />}
         {tab === "schedule" && <Schedule app={app} onScan={() => setTab("scan")} />}
         {tab === "passport" && <Passport app={app} />}

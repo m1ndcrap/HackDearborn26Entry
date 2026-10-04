@@ -15,8 +15,8 @@ export default defineConfig({
         name: "Pocket Apothecary",
         short_name: "Apothecary",
         description: "Scan your medications, catch conflicts, understand them in your language.",
-        theme_color: "#274690",
-        background_color: "#F6F7F9",
+        theme_color: "#3a3f49",
+        background_color: "#eeecea",
         display: "standalone",
         start_url: "/",
         icons: [
@@ -28,6 +28,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Include the bundled font files so text keeps its typeface offline.
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         // API calls must hit the network, never fall back to the cached app shell.
         navigateFallbackDenylist: [/^\/api/, /^\/health/],
         runtimeCaching: [

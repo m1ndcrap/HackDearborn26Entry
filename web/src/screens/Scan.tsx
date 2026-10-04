@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { scanImage } from "../api";
+import { makeThumbnail } from "../thumbnail";
 import { DEFAULT_ACTION, describeMatch, findCabinetMatch, type DupAction } from "../duplicates";
 import type { Medication } from "../types";
 import { useOnline } from "../useOnline";
@@ -80,13 +81,14 @@ export function CameraView({ onShot, onCancel }: { onShot: (f: File) => void; on
 
 interface ScanProps {
   cabinet: Medication[];
-  onAdd: (meds: Medication[], replaceIds: string[]) => void;
+  onAdd: (meds: Medication[], replaceIds: string[], photo: string | null) => void;
 }
 
 export default function Scan({ cabinet, onAdd }: ScanProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<Medication[] | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null); // thumbnail of the scanned label, shown in the Cabinet
   const [choices, setChoices] = useState<Record<string, DupAction>>({}); // scanned med id -> what to do with its cabinet match
   const online = useOnline();
   const [live, setLive] = useState(false);
@@ -99,7 +101,9 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
     setBusy(true);
     setError("");
     try {
-      const res = await scanImage(file);
+      const [res, thumb] = await Promise.all([scanImage(file), makeThumbnail(file)]);
+      // One photo of a whole discharge sheet doesn't identify any single medicine, so skip it there
+      setPhoto(res.document_type === "discharge_sheet" ? null : thumb);
       setFound(res.medications);
       setChoices({});
       if (res.medications.length === 0) setError("We couldn't find a medicine in that photo. Try again in better light, closer to the label.");
@@ -131,7 +135,7 @@ export default function Scan({ cabinet, onAdd }: ScanProps) {
     function confirm() {
       const keep = found!.filter((m) => m.name.trim() && actionFor(m.id) !== "skip");
       const replaceIds = keep.filter((m) => actionFor(m.id) === "replace").map((m) => matches[m.id]!.existing.id);
-      onAdd(keep, replaceIds);
+      onAdd(keep, replaceIds, photo);
     }
 
     return (
