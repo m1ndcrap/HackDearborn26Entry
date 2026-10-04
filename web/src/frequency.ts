@@ -55,6 +55,10 @@ export function fromDirections(text?: string | null): FrequencyChoice {
       return { ...DEFAULT_CHOICE, howOften: "hours", everyHours: p.hours, food };
     case "count":
       return { ...DEFAULT_CHOICE, howOften: (["once", "twice", "three", "four"] as const)[Math.min(p.count, 4) - 1], timeOfDay, food };
+    case "slots": // "morning and evening" = twice a day
+      return { ...DEFAULT_CHOICE, howOften: (["once", "twice", "three", "four"] as const)[Math.min(p.slots.length, 4) - 1], food };
+    case "times": // "at 11 pm" = once a day; the exact time is kept until a button is tapped
+      return { ...DEFAULT_CHOICE, howOften: (["once", "twice", "three", "four"] as const)[Math.min(p.minutes.length, 4) - 1], timeOfDay, food };
     default:
       return DEFAULT_CHOICE;
   }

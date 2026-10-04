@@ -264,6 +264,11 @@ button.off, .choices button:disabled { cursor: not-allowed; }
 .more .row { margin-top: 8px; }
 .buy-entry { margin-top: 26px; padding-top: 16px; border-top: 1.5px solid var(--line); }
 .buy-entry p { margin: 0 0 4px; color: var(--muted); }
+/* Text-style link right under its label (the 48px button padding pushed it down to the bottom of its box) */
+.buy-entry .ghost { min-height: 0; padding: 4px 12px; text-underline-offset: 5px; } /* underline clears the y and g */
+.buy-entry .ghost + p { margin-top: 18px; }
+/* Desktop caps .buy-entry at 760px; center it so the links line up with the centered buttons above */
+.empty .buy-entry { margin-left: auto; margin-right: auto; }
 
 /* Editable cabinet cards: photo + facts are one button inside Nick's .med-card */
 .med-edit {
