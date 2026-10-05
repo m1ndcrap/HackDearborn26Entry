@@ -201,7 +201,7 @@ docker-compose.yml  local stack
 
 ## Team
 
-Built in 24 hours at Hack Dearborn 5 by **Emaad Khan**, **Hamza Mohsin**, **Nick Francisco**, and **Kharma Kelley**.
+Built in 24 hours at Hack Dearborn 5 by **Emaad Khan**, **Hamza Mohsin**, **Nicolas Francisco**, and **Kharma Kelley**.
 
 ## License
 
