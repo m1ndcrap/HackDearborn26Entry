@@ -1,111 +1,208 @@
 # Pocket Apothecary
 
-Scan medications, catch conflicts, understand them in your language. PWA (Vite + React + TypeScript) with a FastAPI backend and Gemini.
+**Scan your medicines, catch dangerous combinations, and understand every warning in your own language.**
 
-## Run it with Docker
+**1st place, Shaping Society track, Hack Dearborn 5** (University of Michigan-Dearborn, October 2026)
 
-    cp .env.example api/.env       # optional: add GEMINI_API_KEY (MOCK mode without it)
-    docker compose up --build
+**Live app:** https://pocket-apothecary.onrender.com
 
-Open http://localhost:8080. The `web` container (nginx) serves the built PWA and proxies `/api` and `/health` to the `api` container.
+Pocket Apothecary is a free, installable web app for people managing medications, especially older adults, family caregivers, and people who don't read English fluently. It reads pill bottles, over-the-counter boxes, and hospital discharge sheets from a photo, checks everything against official FDA drug labels, and explains each warning in plain words, in 60 languages, out loud.
 
-## Run it for development (hot reload)
+> **Not medical advice.** Pocket Apothecary helps people spot questions to ask their pharmacist or doctor. Demos use synthetic data only.
 
-Terminal 1, backend:
+---
 
-    cd api
-    python3 -m venv .venv && source .venv/bin/activate
-    pip install -r requirements.txt
-    cp ../.env.example .env        # add GEMINI_API_KEY and confirm GEMINI_MODEL in AI Studio
-    uvicorn app.main:app --reload --port 8000
+## Why
 
-Terminal 2, frontend:
+Medication mistakes often happen *around* the bottle. Someone comes home from the hospital with new prescriptions, a confusing discharge sheet, and a cabinet full of old pills, and nobody checks how it all fits together. Warning labels are small, technical, and usually English-only.
 
-    cd web
-    npm install
-    npm run dev
+## Features
 
-Open the URL Vite prints. To test on a phone, use the "Network" URL (same Wi-Fi). The photo button uses the phone's camera app, so it works over plain http in dev.
+**Getting started**
+- Welcome screens: app language, then profile (name, age, allergies, conditions), then explanation language and detail level
+- **60 languages** for the whole interface, with right-to-left layouts for Arabic, Urdu, Persian, Hebrew, and Pashto
+- Text size setting (Normal, Large, Extra large)
+- Household profiles, so a caregiver can manage several people
 
-Without a Gemini key the API runs in MOCK mode (fake scan results, templated explanations), so the whole UI can be built first. `GET /health` shows which mode you're in.
+**Adding medicines**
+- Scan with the live camera or photo library. Gemini reads the label, and RxNorm and the FDA NDC Directory verify the drug.
+- Type a medicine in, with tap buttons for how often, food, and time of day
+- Duplicate detection across brand and generic names (Tylenol and store-brand acetaminophen)
+- Edit dose, frequency, and refill and expiry dates, with reminder badges
 
-## Testing the PWA (install + offline)
+**Safety checks**
+- Drug interactions found in **real FDA label text**, including drug classes (NSAIDs, blood thinners, SSRIs, MAOIs, antacids)
+- Allergy, health-condition, alcohol, grapefruit, and food warnings
+- Severity taken from the label's own wording
+- **Every warning quotes the label sentence it came from and links to DailyMed**
+- Plain-language explanations at three reading levels, read aloud with ElevenLabs
 
-The service worker only runs in a production build, and only on `localhost` or HTTPS. So `npm run dev` and the phone "Network" URL above won't show install or offline behavior.
+**Standout features**
+- **Discharge reconciliation:** scan a hospital discharge sheet to see what's new, changed, stopped, or still in the cabinet but missing from the sheet
+- **Check before buying:** scan or type an over-the-counter product for a red, yellow, or green verdict against everything already taken
 
-    cd web
-    npm run build && npm run preview     # serves dist/ on :4173, still proxies /api to the backend
+**Daily use**
+- Smart schedule built from label directions and the person's routine, spacing out drugs that must be taken apart
+- Calendar export (.ics) and dose reminders
+- **Medication Passport:** a printable summary with a QR code for ER staff. The data lives inside the QR code; nothing is stored on a server.
+- Installable on any phone, works offline, and keeps health data on the device
 
-On a laptop, open http://localhost:4173 in Chrome, then go to DevTools > Application:
+## How it works
 
-- Manifest: should say installable, with no errors.
-- Service workers: should be activated.
-- Network > Offline, then reload: the cabinet still opens and the offline banner shows.
+```
+Photo -> shrunk on the phone -> FastAPI -> Gemini reads the label (structured JSON)
+                                         |-> RxNorm + FDA NDC verify the drug -> saved on the phone
 
-On a phone, you need HTTPS. With the backend and preview running:
+Safety check -> FastAPI -> openFDA labels -> rules engine finds interactions + severity
+                                          |-> Gemini explains only what the label says -> ElevenLabs reads it aloud
+```
 
-    npx cloudflared tunnel --url http://localhost:4173
+**Design principle:** rules and FDA label data decide what is dangerous. AI only reads labels and explains warnings, so every warning has a citation.
 
-Open the https://...trycloudflare.com URL it prints.
+**Privacy:** profiles and medicines are stored only in the browser on the person's device. There are no accounts and no user database. Label photos are sent to Gemini to be read and are not kept.
 
-- Android Chrome: Profile > Install app.
-- iPhone Safari: Share > Add to Home Screen.
+## Tech stack
 
-Then turn on airplane mode and launch it from the home screen.
+| Layer | Tools |
+|---|---|
+| Frontend | React 19, TypeScript, Vite, PWA (vite-plugin-pwa / Workbox) |
+| Backend | Python, FastAPI |
+| AI | Google Gemini (label vision, explanations, translation) |
+| Voice | ElevenLabs multilingual text-to-speech, browser voice fallback |
+| Medical data | openFDA drug labels, RxNorm / RxNav (NLM), FDA NDC Directory, DailyMed |
+| Hosting | Render (static site + Docker web service, one Blueprint) |
+| Local dev | Docker Compose |
 
-Icons live in `web/public/` (`pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png`). Overwrite them with the real artwork using the same names. To regenerate them all from one SVG:
+## Running locally
 
-    npx @vite-pwa/assets-generator --preset minimal-2023 public/icon.svg
+### With Docker
 
-## Layout
+```bash
+cp .env.example api/.env      # add your keys (see below); runs in mock mode without a Gemini key
+docker compose up --build
+```
 
-    api/app/models.py   data contract (Pydantic). Mirror changes in web/src/types.ts
-    api/app/gemini.py   vision extraction + explanations (Gemini, structured JSON output)
-    api/app/drugs.py    verifies each scan: RxNorm (name -> ingredient, real strengths) + FDA NDC Directory (exact product)
-    api/app/safety.py   deterministic checks (demo rules) + openFDA label fetch starter
-    api/app/main.py     endpoints: /api/scan, /api/report, /api/explain, /api/label/{ingredient}
-    web/src/screens/    Cabinet, Scan (+confirm), Report (flags + explain + read aloud), Profile
+Open http://localhost:8080. The `web` container (nginx) serves the built app and proxies `/api` and `/health` to the `api` container.
 
-## Principle
+### For development (hot reload)
 
-Rules and FDA label data decide what gets flagged. Gemini only extracts text from photos and explains flags in plain language. Never let the model invent interactions.
+Backend:
 
-## Next up (in order)
+```bash
+cd api
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp ../.env.example .env
+uvicorn app.main:app --reload --port 8000
+```
 
-1. Real Gemini key, then test scan with a printed fake label (check extraction quality first).
-2. Replace DEMO_RULES in safety.py with openFDA label text (fetch_label_section is an untested starter). Scans already carry RxNorm ingredients (drugs.py).
-3. Discharge-sheet reconciliation, pre-purchase OTC check.
-4. Smart schedule, Medication Passport (PDF/QR), offline polish.
-5. Vultr deploy with HTTPS.
+Frontend, in a second terminal:
 
-Synthetic data only in demos. Not medical advice.
+```bash
+cd web
+npm install
+npm run dev
+```
 
-## New in this update
+Open the URL Vite prints. To test on a phone on the same Wi-Fi, use the "Network" URL.
 
-- **RxNorm name matching** (`api/app/rxnorm.py`): brand, misspelled, or strength-laden names become generic ingredients. Runs automatically on every scan; `GET /api/normalize?name=` for manual entries. Medicines now carry an `ingredients` list (multi-ingredient products like NyQuil get all of them).
-- **Schedule tab**: label directions become clock times based on each person's routine, separated drugs are spaced out, and "Add to calendar" exports an .ics file.
-- **Reminders**: browser notifications while the app is open, plus a test button. Use the calendar export for reminders when the app is closed.
-- **Passport tab**: printable one-page summary with a QR code. The QR holds the data itself (nothing stored on a server). Set `VITE_PUBLIC_URL` to the deployed https URL at build time so QR codes open on other phones.
-- **ElevenLabs voice** (`api/app/tts.py`, `POST /api/tts`): set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in `api/.env`. Without them, Read aloud uses the browser voice.
+Without a Gemini key, the API runs in **mock mode** (sample scan results and templated explanations). `GET /health` shows which services are configured.
 
-## Discharge reconciliation
+### Environment variables (`api/.env`)
 
-Cabinet > "Home from the hospital?" scans a discharge medication list and compares it with the cabinet (`POST /api/reconcile`, `api/app/reconcile.py`).
+| Variable | Required | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes, for real scans | Label reading, explanations, translation |
+| `GEMINI_MODEL` | Yes | Pin a current model ID from AI Studio |
+| `ELEVENLABS_API_KEY` | Optional | Natural read-aloud |
+| `ELEVENLABS_VOICE_ID` | Optional | Voice to use |
+| `ELEVENLABS_MODEL` | Optional | Defaults to `eleven_multilingual_v2` |
+| `OPENFDA_API_KEY` | Optional | Higher openFDA rate limits ([free key](https://open.fda.gov/apis/authentication/)) |
+| `LABEL_CACHE_DIR` | Optional | Where FDA labels are cached (default `api/.label_cache`) |
 
-- **Gemini** reads every line with its status: start, change, continue, stop (or unclear).
-- **Matching is by ingredient** (RxNorm), so "STOP ibuprofen" matches the Advil bottle and "sertraline" matches Zoloft.
-- **Buckets:** new, changed dose, stopped, hidden duplicate (e.g. new acetaminophen + NyQuil), unchanged, and not on the sheet (ask the doctor).
-- **Safety check** runs on the cabinet as it will be after the changes, and lists the problems in today's cabinet that go away (e.g. Advil + Coumadin bleeding risk).
-- Nothing changes until the family taps "Apply changes". Without a Gemini key, the endpoint returns the demo story (`_mock_discharge` in `gemini.py`).
+Frontend build variable: `VITE_PUBLIC_URL`, the public https URL, so Passport QR codes open on other phones.
 
-## FDA label safety checks
+### Testing install and offline mode
 
-`api/app/openfda.py` fetches FDA drug labels; `api/app/safety.py` turns them into flags.
+The service worker only runs in a production build, on `localhost` or HTTPS:
 
-- **Interactions:** for each pair of medicines, each label's interaction sections are searched for the other drug's ingredients or class (NSAIDs, SSRIs, MAOIs, blood thinners, antacids, and more).
-- **Severity** comes from the label's wording ("contraindicated", "avoid", "serious bleeding" = high; "monitor", "may increase" = caution).
-- **Citations:** each flag has `excerpt` (the label sentence) and `source_url` (the DailyMed page), shown on the Check screen.
-- **Also checked:** profile conditions against label warnings, and alcohol, grapefruit, "with food", and "empty stomach" wording.
-- **Fallbacks:** if openFDA is unreachable or rate limited, built-in rules still run, and the Check screen lists medicines that couldn't be checked.
-- **Rate limits:** add a free `OPENFDA_API_KEY` to `api/.env`. Labels are cached in `api/.label_cache` for a week.
-- **Before the demo:** run `python check_openfda.py` from `api` to test live lookups and warm the cache.
+```bash
+cd web
+npm run build && npm run preview     # http://localhost:4173
+```
+
+In Chrome DevTools > Application, check that the manifest is installable and the service worker is active. Then set Network to Offline and reload: the cabinet, schedule, and passport still work.
+
+For a phone, expose the preview over HTTPS (for example `npx cloudflared tunnel --url http://localhost:4173`), then use Install app on Android or Share > Add to Home Screen on iPhone.
+
+### Warming the FDA label cache
+
+```bash
+cd api
+python check_openfda.py
+```
+
+Tests live openFDA lookups for the demo medicines, prints every flag with its citation, and caches the labels.
+
+## Deployment
+
+`render.yaml` is a Render Blueprint that creates both services:
+
+- **pocket-apothecary:** the static frontend on Render's CDN. `/api` and `/health` are rewritten to the API, so no CORS setup is needed.
+- **pocket-apothecary-api:** the FastAPI backend as a Docker web service.
+
+In Render, choose **New > Blueprint**, pick this repo, and enter the secret keys when prompted. Free API instances sleep when idle, so open `/health` before a demo.
+
+## API
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | Status and which services are configured |
+| `POST /api/scan` | Photo to verified medicines |
+| `POST /api/reconcile` | Discharge sheet compared with the cabinet |
+| `GET /api/normalize?name=` | Brand or misspelled name to generic ingredients |
+| `POST /api/report` | Full safety check with FDA citations |
+| `POST /api/check-otc` | Pre-purchase verdict for a product |
+| `POST /api/explain` | Plain-language explanation of a warning |
+| `POST /api/translate` | Interface text in the chosen language |
+| `POST /api/tts` | ElevenLabs audio |
+| `GET /api/label/{ingredient}` | The FDA label sections used for checks |
+
+Interactive docs are at `/docs` when the API is running.
+
+## Project layout
+
+```
+api/
+  app/
+    main.py         endpoints
+    models.py       data contract (Pydantic); mirror changes in web/src/types.ts
+    gemini.py       label and discharge-sheet reading, explanations
+    drugs.py        scan verification: RxNorm + FDA NDC Directory
+    rxnorm.py       name normalization (brands, misspellings, combination products)
+    openfda.py      FDA label client with caching and rate-limit handling
+    safety.py       interaction, allergy, condition, and food checks with citations
+    otc.py          check before buying
+    reconcile.py    discharge reconciliation
+    translate.py    interface translation
+    tts.py          ElevenLabs voice
+  check_openfda.py  live label check and cache warm-up
+web/
+  src/
+    screens/        Onboarding, Cabinet, Scan, ManualAdd, BuyCheck, Discharge,
+                    Report, Schedule, Passport, ProfileScreen
+    i18n.ts         whole-app translation engine
+    languages.ts    the 60 supported languages
+    schedule.ts     directions to clock times, drug spacing
+    store.ts        on-device state
+render.yaml         Render Blueprint
+docker-compose.yml  local stack
+```
+
+## Team
+
+Built in 24 hours at Hack Dearborn 5 by **Emaad Khan**, **Hamza Mohsin**, **Nick Francisco**, and **Kharma Kelley**.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
